@@ -6,23 +6,23 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Too
 
 // 1. Mock Graph Data Array (Booking Velocity)
 const bookingData = [
-  { name: "Jan", bookings: 120 }, { name: "Feb", bookings: 180 }, 
-  { name: "Mar", bookings: 250 }, { name: "Apr", bookings: 310 }, 
+  { name: "Jan", bookings: 120 }, { name: "Feb", bookings: 180 },
+  { name: "Mar", bookings: 250 }, { name: "Apr", bookings: 310 },
   { name: "May", bookings: 280 }, { name: "Jun", bookings: 390 },
   { name: "Jul", bookings: 420 }, { name: "Aug", bookings: 480 },
 ];
 
 // 2. Mock Graph Data Array (Revenue Velocity)
 const revenueData = [
-  { name: "Jan", revenue: 45000 }, { name: "Feb", revenue: 52000 }, 
-  { name: "Mar", revenue: 78000 }, { name: "Apr", revenue: 95000 }, 
+  { name: "Jan", revenue: 45000 }, { name: "Feb", revenue: 52000 },
+  { name: "Mar", revenue: 78000 }, { name: "Apr", revenue: 95000 },
   { name: "May", revenue: 86000 }, { name: "Jun", revenue: 110000 },
 ];
 
 export default function AdminDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
+
       {/* Page Heading Bounds */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -37,7 +37,7 @@ export default function AdminDashboard() {
 
       {/* Hero Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        
+
         {/* Metric 1 */}
         <Card className="shadow-lg shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800 rounded-2xl">
           <CardContent className="p-6">
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
 
       {/* Advanced Recharts Interface Bounds */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
+
         {/* Graph 1: Booking Growth */}
         <Card className="border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-2xl overflow-hidden">
           <CardHeader className="border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/50 p-6">
@@ -136,12 +136,12 @@ export default function AdminDashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={bookingData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 600}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <Tooltip 
-                  cursor={{fill: '#f1f5f9', opacity: 0.1}}
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                <Tooltip
+                  cursor={{ fill: '#f1f5f9', opacity: 0.1 }}
                   contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 600, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ color: '#60a5fa' }} 
+                  itemStyle={{ color: '#60a5fa' }}
                 />
                 <Bar dataKey="bookings" fill="#2563eb" radius={[6, 6, 0, 0]} barSize={40} />
               </BarChart>
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
         {/* Graph 2: Revenue Matrix */}
         <Card className="border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-2xl overflow-hidden">
           <CardHeader className="border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/50 p-6">
-             <CardTitle className="font-bold flex items-center justify-between">
+            <CardTitle className="font-bold flex items-center justify-between">
               Gross Revenue Trajectory
               <span className="text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-3 py-1 rounded-full uppercase tracking-wider">YTD 2026</span>
             </CardTitle>
@@ -162,17 +162,17 @@ export default function AdminDashboard() {
               <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12, fontWeight: 600}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <Tooltip 
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 600 }}
-                  itemStyle={{ color: '#10b981' }} 
-                  formatter={(value: any) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                  itemStyle={{ color: '#10b981' }}
+                  formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Revenue']}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
               </AreaChart>
