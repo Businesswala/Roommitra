@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // -----------------------------------------------------------------------------
@@ -83,7 +82,8 @@ model Listing {
   createdAt   DateTime @default(now())
   lister      Lister   @relation(fields: [listerId], references: [id])
   bookings    Booking[]
-  reviews     Review[]
+  reviews       Review[]
+  conversations Conversation[]
 }
 
 // -----------------------------------------------------------------------------
