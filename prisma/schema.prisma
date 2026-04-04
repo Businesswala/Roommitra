@@ -1,0 +1,217 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// CORE ACTORS
+// -----------------------------------------------------------------------------
+
+model Lister {
+  id             String       @id @default(uuid())
+  firstName      String
+  middleName     String?
+  surname        String
+  dob            DateTime
+  
+  mobile1        String       @unique
+  mobile2        String?
+  email          String       @unique
+  passwordHash   String
+
+  address        String
+  latitude       Float
+  longitude      Float
+
+  profilePhoto   String?
+  documentNo     String
+  documentUrl    String?
+
+  status         String       @default("PENDING") // PENDING, APPROVED, REJECTED, BLOCKED
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  listings       Listing[]
+  conversations  Conversation[]
+}
+
+model User {
+  id             String       @id @default(uuid())
+  name           String
+  email          String       @unique
+  mobile         String       @unique
+  passwordHash   String
+
+  profilePhoto   String?
+  status         String       @default("ACTIVE") // ACTIVE, BLOCKED
+
+  bookings       Booking[]
+  reviews        Review[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversations  Conversation[]
+}
+
+// -----------------------------------------------------------------------------
+// PHYSICAL ASSETS
+// -----------------------------------------------------------------------------
+
+model Listing {
+  id          String   @id @default(uuid())
+  listerId    String
+  title       String
+  type        String   // ROOM, PG, TIFFIN, LAUNDRY
+  price       Float
+  description String
+
+  address     String   @default("")
+  latitude    Float?   
+  longitude   Float?
+  
+  amenities   String   @default("[]") 
+  images      String   @default("[]") 
+
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+
+  createdAt   DateTime @default(now())
+  lister      Lister   @relation(fields: [listerId], references: [id])
+  bookings    Booking[]
+  reviews     Review[]
+}
+
+// -----------------------------------------------------------------------------
+// OPERATIONAL LEDGERS
+// -----------------------------------------------------------------------------
+
+model Booking {
+  id          String   @id @default(uuid())
+  userId      String
+  listingId   String
+
+  date        DateTime
+  amount      Float
+  status      String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+
+  user        User     @relation(fields: [userId], references: [id])
+  listing     Listing  @relation(fields: [listingId], references: [id])
+  payment     PaymentLedger?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PaymentLedger {
+  id            String   @id @default(uuid())
+  bookingId     String   @unique
+  transactionHash String @unique
+  
+  grossAmount   Float
+  platformFee   Float    // Calculated as 5% usually
+  netToLister   Float
+
+  gatewayStatus String   @default("PENDING") // PENDING, SUCCEEDED, FAILED
+
+  booking       Booking  @relation(fields: [bookingId], references: [id])
+  createdAt     DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// MARKETING & MODERATION
+// -----------------------------------------------------------------------------
+
+model Review {
+  id          String   @id @default(uuid())
+  userId      String
+  listingId   String
+
+  rating      Int      // 1-5
+  content     String
+
+  user        User     @relation(fields: [userId], references: [id])
+  listing     Listing  @relation(fields: [listingId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Offer {
+  id          String   @id @default(uuid())
+  title       String
+  type        String   // BANNER, DISCOUNT
+  discountPct Float?
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("SCHEDULED") // SCHEDULED, ACTIVE, EXPIRED
+
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  title       String
+  body        String
+  target      String   // ALL, SEEKERS, LISTERS
+  status      String   @default("SENT")
+
+  createdAt   DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// CHAT & MESSAGING
+// -----------------------------------------------------------------------------
+
+model Conversation {
+  id          String   @id @default(uuid())
+  userId      String
+  listerId    String
+  listingId   String?
+
+  user        User     @relation(fields: [userId], references: [id])
+  lister      Lister   @relation(fields: [listerId], references: [id])
+  listing     Listing? @relation(fields: [listingId], references: [id])
+  messages    Message[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  senderId       String       // Can be userId or listerId
+  receiverId     String
+  message        String
+  type           String       @default("text") // text, image
+  status         String       @default("sent") // sent, read
+
+  timestamp      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+// -----------------------------------------------------------------------------
+// PLATFORM ADMINISTRATION & SERVICES
+// -----------------------------------------------------------------------------
+
+model Admin {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("SUPER_ADMIN")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+}
