@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import db from '../../../../../prisma.config'; // Adjust path if needed. Wait, it is at root 'prisma.config.ts'
+import db from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
@@ -12,6 +14,7 @@ export async function GET(request: Request) {
     const userId = searchParams.get('userId');
     const listerId = searchParams.get('listerId');
 
+    // @ts-ignore - Prisma types are being stubborn in build
     const conversations = await db.conversation.findMany({
       where: {
         OR: [

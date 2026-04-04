@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, UploadCloud, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
+import ImageUpload from "@/components/ImageUpload";
 
 type CategoryType = "Rooms" | "PG" | "Roommate" | "Tiffin" | "Laundry";
 
@@ -32,7 +33,7 @@ export default function NewListing() {
   const [type, setType] = useState<CategoryType>("Rooms");
   const [amenities, setAmenities] = useState<Record<string, boolean>>({});
 
-  const [imagePlaceholder, setImagePlaceholder] = useState("https://images.unsplash.com/photo-1555854877-bab0e564b8d5");
+  const [imageUrl, setImageUrl] = useState("");
 
   const toggleAmenity = (key: string) => {
     setAmenities(prev => ({ ...prev, [key]: !prev[key] }));
@@ -54,7 +55,7 @@ export default function NewListing() {
       latitude: 0.0,
       longitude: 0.0,
       amenities: JSON.stringify(activeAmenities),
-      images: JSON.stringify([imagePlaceholder])
+      images: JSON.stringify([imageUrl || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5"])
     };
 
     try {
@@ -198,12 +199,7 @@ export default function NewListing() {
           <div className="space-y-4">
              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 pb-2">4. Image Assets</h3>
              
-             <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 flex flex-col items-center justify-center text-center bg-slate-50/50 dark:bg-slate-950/20 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer">
-                <UploadCloud className="w-12 h-12 text-slate-400 mb-4" />
-                <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-1">Drag & Drop visual assets here</h4>
-                <p className="text-sm text-slate-500 max-w-sm mb-6">Or click to manually browse. Ensure imagery is high-resolution identifying the precise physical features.</p>
-                <Button type="button" variant="outline" className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 pointer-events-none">Browse Files</Button>
-             </div>
+             <ImageUpload onUpload={(urls) => setImageUrl(urls[0] || "")} />
           </div>
 
           <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
