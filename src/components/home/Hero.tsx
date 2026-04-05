@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export function Hero() {
   const router = useRouter();
@@ -44,6 +45,21 @@ export function Hero() {
         <p className="mt-6 text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl">
           Verified Rooms, PGs, Tiffin services, and Laundry near you. Search hyperlocal, live comfortable.
         </p>
+
+        <div className="mt-8 flex flex-wrap justify-center gap-4">
+          <Link 
+            href="/register" 
+            className="inline-flex items-center justify-center rounded-xl bg-orange-500 px-8 py-3 text-sm font-black text-white shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all hover:scale-105 active:scale-95"
+          >
+            List Your Property
+          </Link>
+          <Link 
+            href="/login" 
+            className="inline-flex items-center justify-center rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 px-8 py-3 text-sm font-black text-slate-900 dark:text-white shadow-lg transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:scale-105 active:scale-95"
+          >
+            Sign In
+          </Link>
+        </div>
 
         {/* 🚀 Massive Multi-Input Search Bar */}
         <div className="mt-12 w-full max-w-4xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-3 rounded-3xl shadow-2xl shadow-blue-900/10 ring-1 ring-slate-200 dark:ring-slate-800 flex flex-col items-stretch gap-3 transition-all hover:ring-blue-500/30">

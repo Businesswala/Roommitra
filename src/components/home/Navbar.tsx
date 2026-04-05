@@ -1,7 +1,10 @@
+"use client"
+
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { MapPin, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function Navbar() {
   return (
@@ -34,17 +37,24 @@ export function Navbar() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-4">
-          <Link href="/lister/register">
-            <Button variant="outline" className="hidden sm:inline-flex border-blue-200 hover:bg-blue-50 hover:text-blue-700 dark:border-blue-900 dark:hover:bg-blue-900 dark:hover:text-blue-100">
-              List your Property
-            </Button>
+          <Link 
+            href="/register" 
+            className={cn(buttonVariants({ variant: "outline" }), "hidden sm:inline-flex border-blue-200 hover:bg-blue-50 hover:text-blue-700 dark:border-blue-900 dark:hover:bg-blue-900 dark:hover:text-blue-100 h-10 px-4 py-2")}
+          >
+            List your Property
           </Link>
           <div className="hidden sm:flex border-l h-6 mx-2 border-slate-300 dark:border-slate-700"></div>
-          <Link href="/lister/login"><Button variant="ghost" className="font-semibold px-3">Login</Button></Link>
-          <Link href="/user/dashboard">
-            <Button className="font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/25 hidden md:flex">
-              Sign Up
-            </Button>
+          <Link 
+            href="/login" 
+            className={cn(buttonVariants({ variant: "ghost" }), "font-semibold px-3 h-10 py-2")}
+          >
+            Login
+          </Link>
+          <Link 
+            href="/register" 
+            className={cn(buttonVariants(), "font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/25 hidden md:flex h-10 px-4 py-2")}
+          >
+            Sign Up
           </Link>
           <ThemeToggle />
         </div>
