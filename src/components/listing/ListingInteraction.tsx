@@ -8,6 +8,7 @@ import { ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { CreateConversation, SendMessage } from "@/app/actions/chat";
+import { requestBooking } from "@/app/actions/booking";
 import { useAuth } from "@/hooks/useAuth";
 
 interface ListingInteractionProps {
@@ -22,6 +23,26 @@ export function ListingInteraction({ listingId, listerId, price }: ListingIntera
   const [modalOpen, setModalOpen] = useState(false);
   const [inquiryText, setInquiryText] = useState("");
   const [sending, setSending] = useState(false);
+  const [booking, setBooking] = useState(false);
+
+  const handleBooking = async () => {
+    if (!user || !profile) {
+      toast.error("Please login to request a booking");
+      router.push("/login");
+      return;
+    }
+
+    setBooking(true);
+    const result = await requestBooking(listingId, price);
+    setBooking(false);
+
+    if (!result.error) {
+       toast.success("Booking Request Transmitted! Redirecting to dashboard...");
+       setTimeout(() => router.push("/user/dashboard"), 1500);
+    } else {
+       toast.error(result.error);
+    }
+  };
 
   const submitLead = async () => {
     if (!user || !profile) {
@@ -76,10 +97,18 @@ export function ListingInteraction({ listingId, listerId, price }: ListingIntera
         </div>
       </div>
       
+      <Button 
+        onClick={handleBooking}
+        disabled={booking}
+        className="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-xl font-bold text-lg shadow-xl shadow-blue-500/20 mb-4 transition-transform hover:scale-[1.02]"
+      >
+        {booking ? <Loader2 className="animate-spin" /> : "Request Secure Booking"}
+      </Button>
+
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogTrigger>
-          <Button className="w-full h-14 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-xl font-bold text-lg shadow-xl shadow-blue-500/20 mb-4 transition-transform hover:scale-[1.02]">
-            Direct Contact Lister
+          <Button variant="outline" className="w-full h-12 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors mb-4">
+            Connect via Pulse Message
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 rounded-3xl overflow-hidden p-0 shadow-2xl">

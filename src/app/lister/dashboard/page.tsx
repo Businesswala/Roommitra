@@ -4,87 +4,122 @@ import {
   Eye, 
   CheckCircle, 
   Clock, 
-  AlertCircle 
+  AlertCircle,
+  Users,
+  Wallet,
+  ArrowRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getListerStats } from "@/app/actions/listing";
+import { dbCall } from "@/lib/db-utils";
+import { createClient } from "@/utils/supabase/server";
+import Link from "next/link";
 
 export default async function OverviewPage() {
-  const { data: statsData, error } = await getListerStats();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const [statsResult, recentBookingsResult] = await Promise.all([
+    getListerStats(),
+    dbCall(async (db: any) => {
+      const profile = await db.profile.findUnique({ where: { supabaseId: user.id } });
+      if (!profile) return [];
+      return await db.booking.findMany({
+        where: { listing: { listerId: profile.id } },
+        take: 3,
+        orderBy: { createdAt: 'desc' },
+        include: { user: true, listing: true }
+      });
+    }, "Recent bookings")
+  ]);
+
+  const statsData = statsResult.data;
+  const recentBookings = recentBookingsResult.data || [];
 
   const stats = [
-    { title: "Total Listings", value: statsData?.total || "0", icon: Eye, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
-    { title: "Active Listings", value: statsData?.active || "0", icon: Home, color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20" },
-    { title: "Pending Approval", value: statsData?.pending || "0", icon: Clock, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-900/20" },
-    { title: "Profile Status", value: statsData?.status || "PENDING", icon: CheckCircle, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
+    { title: "Active Assets", value: statsData?.active || "0", icon: Home, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
+    { title: "Moderation Queue", value: statsData?.pending || "0", icon: Clock, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-900/20" },
+    { title: "Total Bookings", value: (statsData as any)?.totalBookings || "0", icon: Users, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
+    { title: "Verified Identity", value: statsData?.status || "ACTIVE", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white">Dashboard Overview</h1>
-        <p className="text-slate-500 mt-2">Welcome back! Here's how your listings are performing today.</p>
-        {error && <p className="text-red-500 mt-2 text-sm font-bold">⚠️ {error}</p>}
+        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Provider Command</h1>
+        <p className="text-slate-500 mt-2 font-medium">Verify deployment status and monitor real-time fulfillment across your grid.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
-          <Card key={stat.title} className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-500">{stat.title}</CardTitle>
-              <div className={`p-2 rounded-lg ${stat.bg}`}>
+          <Card key={stat.title} className="border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden rounded-[2.5rem]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">{stat.title}</CardTitle>
+              <div className={`p-3 rounded-2xl ${stat.bg} shadow-sm`}>
                 <stat.icon className={`h-4 w-4 ${stat.color}`} />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-black text-slate-900 dark:text-white">{stat.value}</div>
+              <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <Card className="border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none rounded-[2.5rem] overflow-hidden">
+          <CardHeader className="p-8 border-b border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+            <CardTitle className="text-lg font-black flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-blue-600" />
-              Platform Status
+              Pulse Activity
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50">
-                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold">1</div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Listing Moderation Active</p>
-                  <p className="text-xs text-slate-500">Every new deployment is reviewed within 24h.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <AlertCircle className="h-5 w-5 text-slate-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Hyperlocal Search Engine Synced</p>
-                  <p className="text-xs text-slate-500">Live data mapping into current active radius.</p>
-                </div>
-              </div>
+          <CardContent className="p-8">
+            <div className="space-y-6">
+              {recentBookings.length === 0 ? (
+                <p className="text-sm text-slate-500 italic">Zero physical reservations detected in recent ledger updates.</p>
+              ) : (
+                recentBookings.map((booking: any) => (
+                  <div key={booking.id} className="flex items-center gap-4 group">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center font-black text-blue-600 text-xs shadow-sm">
+                      {booking.user?.name?.[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-slate-900 dark:text-white truncate">{booking.user?.name}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{booking.listing?.title}</p>
+                    </div>
+                    <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest border-slate-100 py-1 bg-white dark:bg-slate-900">{booking.status}</Badge>
+                  </div>
+                ))
+              )}
+              <Link href="/lister/dashboard/bookings">
+                <Button variant="ghost" className="w-full mt-4 h-12 rounded-2xl font-black uppercase text-[10px] tracking-widest text-slate-400 hover:text-blue-600 hover:bg-blue-50 group">
+                  Audit Full Lattice <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-none">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold">Pro Tip for Listers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="opacity-90 text-sm leading-relaxed">
-              New listings usually take 12-24 hours for moderation. Please ensure all property photos are clear to avoid rejection. Our secure engine checks for ID verification and document validity.
-            </p>
-            <button className="mt-6 bg-white text-blue-700 px-6 py-2 rounded-xl font-bold text-sm hover:bg-opacity-90 transition-all">
-              Optimise Profile
-            </button>
-          </CardContent>
+        <Card className="border-none shadow-2xl shadow-blue-500/10 rounded-[2.5rem] bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/20 rounded-full blur-[80px] -translate-y-12 translate-x-12 group-hover:scale-125 transition-transform duration-700" />
+           <CardHeader className="p-10 pb-4">
+             <CardTitle className="text-2xl font-black tracking-tight flex items-center gap-3">
+               <Wallet size={24} className="text-blue-500" /> Pro Governance
+             </CardTitle>
+           </CardHeader>
+           <CardContent className="p-10 pt-0">
+             <p className="text-slate-400 font-medium leading-relaxed mb-10">
+               Your physical assets are currently deploying within the standard moderation perimeter. Ensure your **Business Name** and **Metadata** are verified to minimize fulfillment rejection rates.
+             </p>
+             <div className="flex flex-col sm:flex-row gap-4">
+               <Button className="flex-1 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest border-none shadow-xl shadow-blue-600/20">Optimise Grid Identity</Button>
+               <Button variant="outline" className="flex-1 h-16 bg-transparent text-white border-slate-700 hover:bg-slate-800 rounded-3xl font-black uppercase text-[10px] tracking-widest transition-all">Documentation Hub</Button>
+             </div>
+           </CardContent>
         </Card>
       </div>
     </div>
