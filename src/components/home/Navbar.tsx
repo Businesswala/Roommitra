@@ -38,7 +38,7 @@ export function Navbar() {
         {/* Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-4">
           <Link 
-            href="/register" 
+            href="/register?role=lister" 
             className={cn(buttonVariants({ variant: "outline" }), "hidden sm:inline-flex border-blue-200 hover:bg-blue-50 hover:text-blue-700 dark:border-blue-900 dark:hover:bg-blue-900 dark:hover:text-blue-100 h-10 px-4 py-2")}
           >
             List your Property
@@ -51,7 +51,7 @@ export function Navbar() {
             Login
           </Link>
           <Link 
-            href="/register" 
+            href="/register?role=user" 
             className={cn(buttonVariants(), "font-semibold bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/25 hidden md:flex h-10 px-4 py-2")}
           >
             Sign Up
