@@ -9,53 +9,36 @@ datasource db {
   provider = "postgresql"
 }
 
-// -----------------------------------------------------------------------------
-// CORE ACTORS
-// -----------------------------------------------------------------------------
-
-model Lister {
-  id             String       @id @default(uuid())
-  firstName      String
-  middleName     String?
-  surname        String
-  dob            DateTime
-  
-  mobile1        String       @unique
-  mobile2        String?
-  email          String       @unique
-  passwordHash   String
-
-  address        String
-  latitude       Float
-  longitude      Float
-
-  profilePhoto   String?
-  documentNo     String
-  documentUrl    String?
-
-  status         String       @default("PENDING") // PENDING, APPROVED, REJECTED, BLOCKED
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  listings       Listing[]
-  conversations  Conversation[]
+enum Role {
+  USER
+  LISTER
+  ADMIN
 }
 
-model User {
+model Profile {
   id             String       @id @default(uuid())
-  name           String
+  supabaseId     String       @unique
   email          String       @unique
+  name           String
   mobile         String       @unique
-  passwordHash   String
-
+  role           Role         @default(USER)
+  
+  // Lister specific fields
+  businessName   String?
+  documentUrl    String?      // Cloudinary URL for ID proof
+  
   profilePhoto   String?
-  status         String       @default("ACTIVE") // ACTIVE, BLOCKED
-
-  bookings       Booking[]
-  reviews        Review[]
-
+  status         String       @default("ACTIVE") // ACTIVE, PENDING, BLOCKED
+  
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  conversations  Conversation[]
+
+  // Relations
+  listings       Listing[]
+  bookings       Booking[]
+  reviews        Review[]
+  conversationsAsUser   Conversation[] @relation("ConversationUser")
+  conversationsAsLister Conversation[] @relation("ConversationLister")
 }
 
 // -----------------------------------------------------------------------------
@@ -80,7 +63,7 @@ model Listing {
   status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
 
   createdAt   DateTime @default(now())
-  lister      Lister   @relation(fields: [listerId], references: [id])
+  lister      Profile  @relation(fields: [listerId], references: [id])
   bookings    Booking[]
   reviews       Review[]
   conversations Conversation[]
@@ -99,7 +82,7 @@ model Booking {
   amount      Float
   status      String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
 
-  user        User     @relation(fields: [userId], references: [id])
+  user        Profile  @relation(fields: [userId], references: [id])
   listing     Listing  @relation(fields: [listingId], references: [id])
   payment     PaymentLedger?
 
@@ -134,7 +117,7 @@ model Review {
   rating      Int      // 1-5
   content     String
 
-  user        User     @relation(fields: [userId], references: [id])
+  user        Profile  @relation(fields: [userId], references: [id])
   listing     Listing  @relation(fields: [listingId], references: [id])
   createdAt   DateTime @default(now())
 }
@@ -171,8 +154,8 @@ model Conversation {
   listerId    String
   listingId   String?
 
-  user        User     @relation(fields: [userId], references: [id])
-  lister      Lister   @relation(fields: [listerId], references: [id])
+  user        Profile     @relation("ConversationUser", fields: [userId], references: [id])
+  lister      Profile     @relation("ConversationLister", fields: [listerId], references: [id])
   listing     Listing? @relation(fields: [listingId], references: [id])
   messages    Message[]
 
@@ -183,7 +166,7 @@ model Conversation {
 model Message {
   id             String       @id @default(uuid())
   conversationId String
-  senderId       String       // Can be userId or listerId
+  senderId       String       // Profile ID
   receiverId     String
   message        String
   type           String       @default("text") // text, image
@@ -197,16 +180,6 @@ model Message {
 // PLATFORM ADMINISTRATION & SERVICES
 // -----------------------------------------------------------------------------
 
-model Admin {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         String   @default("SUPER_ADMIN")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-}
-
 model Service {
   id          String   @id @default(uuid())
   name        String
@@ -215,3 +188,4 @@ model Service {
   status      String   @default("ACTIVE")
   createdAt   DateTime @default(now())
 }
+

@@ -5,89 +5,135 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Search, CheckCheck, MoreVertical, Phone } from "lucide-react";
-
-type Message = {
-  id: string;
-  senderId: "me" | "them";
-  text: string;
-  timestamp: string;
-};
-
-type Thread = {
-  id: string;
-  contactName: string;
-  propertyContext: string;
-  avatar: string;
-  verified: boolean;
-  messages: Message[];
-};
-
-const mockThreads: Thread[] = [
-  {
-    id: "thread-1001",
-    contactName: "Rahul Sharma",
-    propertyContext: "Luxury Studio Suite in Indiranagar",
-    avatar: "https://ui-avatars.com/api/?name=Rahul+Sharma&background=0D8ABC&color=fff",
-    verified: true,
-    messages: [
-      { id: "m1", senderId: "me", text: "Hello Rahul! Is the Studio Suite still fully vacant for immediate deployment?", timestamp: "10:24 AM" },
-      { id: "m2", senderId: "them", text: "Hi! Yes, the suite is available. I can schedule a physical walk-through for you tomorrow at 11 AM if that works?", timestamp: "10:30 AM" },
-      { id: "m3", senderId: "me", text: "Brilliant. Does the 100Mbps Wifi grid natively cover the balcony bounds?", timestamp: "10:31 AM" },
-      { id: "m4", senderId: "them", text: "Absolutely, we installed dedicated mesh routing extensions yesterday.", timestamp: "10:35 AM" }
-    ]
-  },
-  {
-    id: "thread-1002",
-    contactName: "Ayesha Khan",
-    propertyContext: "Home Style Veg Tiffin Service",
-    avatar: "https://ui-avatars.com/api/?name=Ayesha+Khan&background=FF8A00&color=fff",
-    verified: true,
-    messages: [
-      { id: "m1", senderId: "me", text: "Hey Ayesha, do you execute delivery bounds into the Koramangala 4th block sector?", timestamp: "Yesterday" },
-      { id: "m2", senderId: "them", text: "Yes, we actively deliver there! Delivery is free for standard 30-day subscriptions.", timestamp: "Yesterday" },
-    ]
-  }
-];
+import { ArrowLeft, Send, Search, CheckCheck, MoreVertical, Phone, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useSocket } from "@/components/providers/SocketProvider";
+import { GetConversations, GetMessages, SendMessage } from "@/app/actions/chat";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 export default function MessagesInbox() {
-  const [threads, setThreads] = useState<Thread[]>(mockThreads);
-  const [activeThreadId, setActiveThreadId] = useState<string>("thread-1001");
+  const { user, profile, loading: authLoading } = useAuth();
+  const { socket, isConnected } = useSocket();
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Track scroll position seamlessly when executing new messages
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const activeThread = threads.find(t => t.id === activeThreadId);
+  // 1. Fetch Conversations on Mount
+  useEffect(() => {
+    if (user) {
+      const fetchConvos = async () => {
+        const data = await GetConversations(user.id);
+        setConversations(data);
+        setIsLoading(false);
+        if (data.length > 0 && !activeConversationId) {
+          setActiveConversationId(data[0].id);
+        }
+      };
+      fetchConvos();
+    }
+  }, [user]);
 
+  // 2. Fetch Messages when Active Conversation changes
+  useEffect(() => {
+    if (activeConversationId) {
+      const fetchMsgs = async () => {
+        const data = await GetMessages(activeConversationId);
+        setMessages(data);
+      };
+      fetchMsgs();
+
+      // Join Socket Room
+      if (socket) {
+        socket.emit('join-conversation', activeConversationId);
+      }
+    }
+  }, [activeConversationId, socket]);
+
+  // 3. Listen for Incoming Messages
+  useEffect(() => {
+    if (socket) {
+      const handleReceive = (msg: any) => {
+        if (msg.conversationId === activeConversationId) {
+          setMessages(prev => [...prev, msg]);
+        }
+        // Update last message in conversation list
+        setConversations(prev => prev.map(c => 
+          c.id === msg.conversationId ? { ...c, messages: [msg] } : c
+        ));
+      };
+
+      socket.on('receive-message', handleReceive);
+      return () => {
+        socket.off('receive-message', handleReceive);
+      };
+    }
+  }, [socket, activeConversationId]);
+
+  // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeThread?.messages]);
+  }, [messages]);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  const activeConversation = conversations.find(c => c.id === activeConversationId);
 
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: "me",
-      text: inputText,
-      timestamp: "Just now"
+  const handleSend = async () => {
+    if (!inputText.trim() || !activeConversation || !profile) return;
+
+    const receiverId = profile.id === activeConversation.userId 
+      ? activeConversation.listerId 
+      : activeConversation.userId;
+
+    const msgData = {
+      conversationId: activeConversationId!,
+      senderId: profile.id,
+      receiverId,
+      message: inputText,
+      timestamp: new Date().toISOString(),
+      status: 'sent'
     };
 
-    setThreads(currentThreads => 
-      currentThreads.map(thread => {
-        if (thread.id === activeThreadId) {
-          return { ...thread, messages: [...thread.messages, newMessage] };
-        }
-        return thread;
-      })
-    );
-    
+    // 1. Optimistic Update
+    setMessages(prev => [...prev, { ...msgData, id: Date.now().toString() }]);
     setInputText("");
+
+    // 2. Socket Emit
+    if (socket) {
+      socket.emit('send-message', { conversationId: activeConversationId, message: msgData });
+    }
+
+    // 3. Persistence
+    const result = await SendMessage(msgData);
+    if (!result.success) {
+      toast.error("Failed to send message: " + result.error);
+    }
   };
 
+  if (authLoading || isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 text-center">
+        <h1 className="text-2xl font-bold mb-4">Please log in to view your messages</h1>
+        <Link href="/login">
+          <Button>Login</Button>
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen bg-slate-50 dark:bg-slate-950 flex flex-col overflow-hidden">
+    <div className="h-screen bg-slate-50 dark:bg-slate-950 flex flex-col overflow-hidden font-sans">
       
       {/* Global Header Bounds */}
       <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-shrink-0 items-center justify-between px-6 z-50">
@@ -98,9 +144,10 @@ export default function MessagesInbox() {
           <div className="font-black text-xl flex items-center gap-1">
             <span className="text-blue-600 dark:text-blue-500">Room</span>
             <span className="text-orange-500">mitra</span>
-            <span className="hidden sm:inline ml-2 text-slate-300 dark:text-slate-700">|</span>
-            <span className="hidden sm:inline ml-2 text-sm font-semibold text-slate-500">Unified Comms Portal</span>
           </div>
+          {!isConnected && (
+            <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full animate-pulse">Offline</span>
+          )}
         </div>
         <ThemeToggle />
       </header>
@@ -109,42 +156,55 @@ export default function MessagesInbox() {
       <div className="flex-1 flex overflow-hidden max-w-[1600px] w-full mx-auto shadow-2xl">
         
         {/* Left Hand Thread Directory */}
-        <aside className={`w-full md:w-[380px] lg:w-[420px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-shrink-0 flex flex-col transition-all ${activeThreadId ? 'hidden md:flex' : 'flex'}`}>
+        <aside className={`w-full md:w-[380px] lg:w-[420px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-shrink-0 flex flex-col transition-all ${activeConversationId ? 'hidden md:flex' : 'flex'}`}>
            <div className="p-4 border-b border-slate-200 dark:border-slate-800">
              <div className="relative">
                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                <input 
                  className="w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 border-none rounded-xl h-12 pl-10 pr-4 focus:ring-2 focus:ring-blue-500 outline-none" 
-                 placeholder="Locate contact logs or specific leads..."
+                 placeholder="Search conversations..."
                />
              </div>
            </div>
 
            <div className="flex-1 overflow-y-auto overflow-x-hidden">
-              {threads.map((thread) => {
-                 const lastMsg = thread.messages[thread.messages.length - 1];
-                 const isActive = thread.id === activeThreadId;
+              {conversations.length === 0 && (
+                <div className="p-8 text-center text-slate-500">
+                  No conversations yet.
+                </div>
+              )}
+              {conversations.map((convo) => {
+                 const otherUser = profile?.id === convo.userId ? convo.lister : convo.user;
+                 const lastMsg = convo.messages?.[0];
+                 const isActive = convo.id === activeConversationId;
 
                  return (
                    <div 
-                     key={thread.id} 
-                     onClick={() => setActiveThreadId(thread.id)}
+                     key={convo.id} 
+                     onClick={() => setActiveConversationId(convo.id)}
                      className={`flex items-start gap-4 p-4 border-b border-slate-100 dark:border-slate-800/60 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/40 ${isActive ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                    >
-                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                     <img src={thread.avatar} alt={thread.contactName} className="w-14 h-14 rounded-full object-cover shadow-sm bg-slate-200" />
+                     <div className="w-14 h-14 rounded-full bg-slate-200 flex items-center justify-center text-lg font-bold text-slate-500 ring-2 ring-white dark:ring-slate-800 shadow-sm overflow-hidden">
+                        {otherUser?.profilePhoto ? (
+                          <img src={otherUser.profilePhoto} alt={otherUser.name} className="w-full h-full object-cover" />
+                        ) : (
+                          otherUser?.name?.[0]?.toUpperCase()
+                        )}
+                     </div>
                      <div className="flex-1 min-w-0">
-                       <div className="flex justify-between items-center mb-1 text-sm font-semibold text-slate-500 dark:text-slate-400 line-clamp-1">
-                          {thread.propertyContext}
+                       <div className="flex justify-between items-center mb-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest line-clamp-1">
+                          {convo.listing?.title || "Direct Connection"}
                        </div>
                        <div className="flex justify-between items-center">
                          <h3 className={`font-bold truncate pr-3 ${isActive ? 'text-blue-700 dark:text-blue-400' : 'text-slate-900 dark:text-white'}`}>
-                           {thread.contactName}
+                           {otherUser?.name}
                          </h3>
-                         <span className="text-xs text-slate-400 flex-shrink-0">{lastMsg.timestamp}</span>
+                         <span className="text-[10px] text-slate-400 flex-shrink-0">
+                           {lastMsg ? format(new Date(lastMsg.timestamp), 'h:mm a') : ''}
+                         </span>
                        </div>
                        <p className={`text-sm truncate mt-1 ${isActive ? 'text-blue-600/80 dark:text-blue-300' : 'text-slate-500 dark:text-slate-400'}`}>
-                         {lastMsg.senderId === 'me' ? 'You: ' : ''}{lastMsg.text}
+                         {lastMsg?.message || "Establish contact..."}
                        </p>
                      </div>
                    </div>
@@ -154,20 +214,33 @@ export default function MessagesInbox() {
         </aside>
 
         {/* Right Hand Live Transcript Engine */}
-        {activeThread ? (
-          <main className={`flex-1 flex flex-col bg-[#F8FAFC] dark:bg-slate-950 relative ${!activeThreadId ? 'hidden md:flex' : 'flex'}`}>
+        {activeConversation ? (
+          <main className={`flex-1 flex flex-col bg-[#F8FAFC] dark:bg-slate-950 relative ${!activeConversationId ? 'hidden md:flex' : 'flex'}`}>
             
             {/* Chat Transcript Header */}
             <div className="h-[72px] border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md flex items-center justify-between px-6 z-10">
                <div className="flex items-center gap-4">
-                  <button className="md:hidden text-slate-500" onClick={() => setActiveThreadId("")}>
+                  <button className="md:hidden text-slate-500" onClick={() => setActiveConversationId(null)}>
                     <ArrowLeft size={24} />
                   </button>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={activeThread.avatar} alt="Avatar" className="w-10 h-10 rounded-full shadow-sm" />
+                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center font-bold text-blue-600 overflow-hidden shadow-sm">
+                    {profile?.id === activeConversation.userId 
+                      ? activeConversation.lister?.profilePhoto 
+                        ? <img src={activeConversation.lister.profilePhoto} /> 
+                        : activeConversation.lister?.name?.[0]
+                      : activeConversation.user?.profilePhoto
+                        ? <img src={activeConversation.user.profilePhoto} />
+                        : activeConversation.user?.name?.[0]
+                    }
+                  </div>
                   <div>
-                    <h2 className="font-bold text-slate-900 dark:text-white text-lg leading-tight">{activeThread.contactName}</h2>
-                    <p className="text-xs font-semibold text-green-500 tracking-wide">Online • Interacting via Marketplace</p>
+                    <h2 className="font-bold text-slate-900 dark:text-white text-lg leading-tight">
+                      {profile?.id === activeConversation.userId ? activeConversation.lister?.name : activeConversation.user?.name}
+                    </h2>
+                    <p className="text-xs font-semibold text-green-500 tracking-wide flex items-center gap-1.5">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      Active Network Node
+                    </p>
                   </div>
                </div>
                <div className="flex items-center gap-2">
@@ -181,23 +254,23 @@ export default function MessagesInbox() {
             </div>
 
             {/* Bubble Transcript Matrix */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:20px_20px]">
               <div className="text-center my-6">
-                <span className="text-xs font-bold bg-slate-200/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 py-1.5 px-3 rounded-full">
-                   End-to-End Encryption Target Acquired
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-blue-600/10 text-blue-600 dark:text-blue-400 py-1.5 px-4 rounded-full border border-blue-600/20">
+                   Secure Channel Established
                 </span>
               </div>
 
-              {activeThread.messages.map((msg) => {
-                const isMe = msg.senderId === "me";
+              {messages.map((msg) => {
+                const isMe = msg.senderId === profile?.id;
                 return (
-                  <div key={msg.id} className={`flex flex-col w-full ${isMe ? 'items-end' : 'items-start'}`}>
-                     <div className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-5 py-3 shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-sm'}`}>
-                       <p className="text-[15px] leading-relaxed">{msg.text}</p>
+                  <div key={msg.id} className={`flex flex-col w-full ${isMe ? 'items-end' : 'items-start animate-in slide-in-from-left-2 duration-300'}`}>
+                     <div className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-5 py-3 shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-none'}`}>
+                       <p className="text-[15px] leading-relaxed font-medium">{msg.message}</p>
                      </div>
-                     <div className={`flex items-center gap-1 mt-1 text-[11px] font-medium text-slate-400 ${isMe ? 'flex-row-reverse' : ''}`}>
-                       {msg.timestamp}
-                       {isMe && <CheckCheck className="w-3 h-3 text-blue-500" />}
+                     <div className={`flex items-center gap-1 mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tighter ${isMe ? 'flex-row-reverse' : ''}`}>
+                       {format(new Date(msg.timestamp), 'h:mm a')}
+                       {isMe && <CheckCheck className="w-3.5 h-3.5 text-blue-500" />}
                      </div>
                   </div>
                 )
@@ -207,29 +280,38 @@ export default function MessagesInbox() {
 
             {/* Input Footer Logic */}
             <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-               <div className="max-w-4xl mx-auto flex items-end gap-3 bg-slate-50 dark:bg-slate-950 p-2 rounded-2xl shadow-inner ring-1 ring-slate-200 dark:ring-slate-800">
+               <div className="max-w-4xl mx-auto flex items-end gap-3 bg-slate-50 dark:bg-slate-950 p-2 rounded-2xl shadow-inner ring-1 ring-slate-200 dark:ring-slate-800 group focus-within:ring-2 focus-within:ring-blue-500 transition-all">
                   <Input 
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="Transmit pulse into active loop..."
-                    className="flex-1 bg-transparent border-0 h-12 focus-visible:ring-0 text-base shadow-none"
+                    placeholder="Enter message..."
+                    className="flex-1 bg-transparent border-0 h-14 focus-visible:ring-0 text-base shadow-none placeholder:text-slate-400"
                   />
-                  <Button onClick={handleSend} className="h-12 w-12 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 shrink-0">
-                    <Send className="w-5 h-5 text-white ml-0.5" />
+                  <Button 
+                    onClick={handleSend} 
+                    disabled={!inputText.trim()}
+                    className="h-14 w-14 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-500/20 shrink-0 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Send className="w-6 h-6 text-white" />
                   </Button>
                </div>
+               <p className="text-[10px] text-center mt-3 text-slate-400 font-bold uppercase tracking-widest">
+                 Transmitting via Roommitra Real-time Engine
+               </p>
             </div>
 
           </main>
         ) : (
           <div className="hidden md:flex flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
              <div className="text-center p-8 max-w-sm">
-               <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/20 rounded-full mx-auto flex items-center justify-center mb-6 ring-8 ring-white dark:ring-slate-900 shadow-xl">
-                 <Send size={32} className="text-blue-500 ml-1 mt-1" />
+               <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/20 rounded-full mx-auto flex items-center justify-center mb-8 ring-8 ring-white dark:ring-slate-900 shadow-2xl animate-bounce duration-3000">
+                 <Send size={40} className="text-blue-500 rotate-12" />
                </div>
-               <h3 className="text-2xl font-black text-slate-800 dark:text-slate-200 tracking-tight">Select an active grid thread</h3>
-               <p className="text-slate-500 mt-2">Establish real-time data flow with verified marketplace objects to accelerate your physical deployments.</p>
+               <h3 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tighter">Unified Messaging</h3>
+               <p className="text-slate-500 dark:text-slate-400 mt-4 font-medium leading-relaxed">
+                 Select a conversation to begin your next physical deployment. Direct data-flow enabled.
+               </p>
              </div>
           </div>
         )}

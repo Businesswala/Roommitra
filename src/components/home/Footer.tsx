@@ -21,19 +21,19 @@ export function Footer() {
           <div>
             <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Services</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/" className="hover:text-blue-400 transition-colors">Rooms & PGs</Link></li>
-              <li><Link href="/" className="hover:text-orange-400 transition-colors">Find a Roommate</Link></li>
-              <li><Link href="/" className="hover:text-rose-400 transition-colors">Tiffin Suppliers</Link></li>
-              <li><Link href="/" className="hover:text-purple-400 transition-colors">Laundry Providers</Link></li>
+              <li><Link href="/explore?type=ROOM" className="hover:text-blue-400 transition-colors">Rooms & PGs</Link></li>
+              <li><Link href="/explore?type=ROOMMATE" className="hover:text-orange-400 transition-colors">Find a Roommate</Link></li>
+              <li><Link href="/explore?type=TIFFIN" className="hover:text-rose-400 transition-colors">Tiffin Suppliers</Link></li>
+              <li><Link href="/explore?type=LAUNDRY" className="hover:text-purple-400 transition-colors">Laundry Providers</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Company</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/" className="hover:text-white transition-colors">About Us</Link></li>
-              <li><Link href="/" className="hover:text-white transition-colors">Careers</Link></li>
-              <li><Link href="/" className="hover:text-white transition-colors">Press & Media</Link></li>
+              <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
+              <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
+              <li><Link href="/press" className="hover:text-white transition-colors">Press & Media</Link></li>
               <li><Link href="/lister/register" className="hover:text-white transition-colors">Become a Lister</Link></li>
             </ul>
           </div>
@@ -41,10 +41,10 @@ export function Footer() {
           <div>
             <h4 className="text-white font-bold mb-4 uppercase text-sm tracking-wider">Support</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link href="/" className="hover:text-white transition-colors">Help Center</Link></li>
-              <li><Link href="/" className="hover:text-white transition-colors">Trust & Safety</Link></li>
-              <li><Link href="/" className="hover:text-white transition-colors">Terms of Service</Link></li>
-              <li><Link href="/" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
+              <li><Link href="/safety" className="hover:text-white transition-colors">Trust & Safety</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
         </div>

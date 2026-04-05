@@ -28,7 +28,7 @@ export async function GET(request: Request) {
           take: 1
         },
         user: { select: { name: true, profilePhoto: true } },
-        lister: { select: { firstName: true, surname: true, profilePhoto: true } }
+        lister: { select: { name: true, profilePhoto: true } }
       },
       orderBy: { updatedAt: 'desc' }
     });

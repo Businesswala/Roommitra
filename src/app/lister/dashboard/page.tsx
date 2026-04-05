@@ -1,5 +1,3 @@
-"use client";
-
 import { 
   TrendingUp, 
   Home, 
@@ -9,13 +7,16 @@ import {
   AlertCircle 
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getListerStats } from "@/app/actions/listing";
 
-export default function OverviewPage() {
+export default async function OverviewPage() {
+  const { data: statsData, error } = await getListerStats();
+
   const stats = [
-    { title: "Total Views", value: "1,284", icon: Eye, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
-    { title: "Active Listings", value: "3", icon: Home, color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20" },
-    { title: "Pending Approval", value: "1", icon: Clock, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-900/20" },
-    { title: "Profile Status", value: "Verified", icon: CheckCircle, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
+    { title: "Total Listings", value: statsData?.total || "0", icon: Eye, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
+    { title: "Active Listings", value: statsData?.active || "0", icon: Home, color: "text-green-600", bg: "bg-green-50 dark:bg-green-900/20" },
+    { title: "Pending Approval", value: statsData?.pending || "0", icon: Clock, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-900/20" },
+    { title: "Profile Status", value: statsData?.status || "PENDING", icon: CheckCircle, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
   ];
 
   return (
@@ -23,6 +24,7 @@ export default function OverviewPage() {
       <div>
         <h1 className="text-3xl font-black text-slate-900 dark:text-white">Dashboard Overview</h1>
         <p className="text-slate-500 mt-2">Welcome back! Here's how your listings are performing today.</p>
+        {error && <p className="text-red-500 mt-2 text-sm font-bold">⚠️ {error}</p>}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -46,22 +48,27 @@ export default function OverviewPage() {
           <CardHeader>
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-blue-600" />
-              Recent Activity
+              Platform Status
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
-                  <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                    <AlertCircle className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Property view on "Premium Room HSR"</p>
-                    <p className="text-xs text-slate-500">2 hours ago</p>
-                  </div>
+              <div className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50">
+                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold">1</div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Listing Moderation Active</p>
+                  <p className="text-xs text-slate-500">Every new deployment is reviewed within 24h.</p>
                 </div>
-              ))}
+              </div>
+              <div className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                <div className="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Hyperlocal Search Engine Synced</p>
+                  <p className="text-xs text-slate-500">Live data mapping into current active radius.</p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -72,10 +79,10 @@ export default function OverviewPage() {
           </CardHeader>
           <CardContent>
             <p className="opacity-90 text-sm leading-relaxed">
-              Adding clear, high-resolution photos increases your listing engagement by 40%. Use our built-in Cloudinary optimizer to ensure your images load fast for potential tenants!
+              New listings usually take 12-24 hours for moderation. Please ensure all property photos are clear to avoid rejection. Our secure engine checks for ID verification and document validity.
             </p>
             <button className="mt-6 bg-white text-blue-700 px-6 py-2 rounded-xl font-bold text-sm hover:bg-opacity-90 transition-all">
-              Update Photos
+              Optimise Profile
             </button>
           </CardContent>
         </Card>

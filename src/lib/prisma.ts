@@ -5,17 +5,9 @@ const prismaClientSingleton = () => {
   // During Next.js build phase, we use a mock to pass static analysis without a live DB
   if (process.env.NEXT_PHASE === 'phase-production-build') {
     return new Proxy({}, {
-      get: () => {
-        const noop = () => ({
-          findMany: async () => [],
-          findUnique: async () => null,
-          findFirst: async () => null,
-          create: async () => ({}),
-          update: async () => ({}),
-          delete: async () => ({}),
-        });
-        return noop;
-      }
+      get: () => new Proxy({}, {
+        get: () => async () => []
+      })
     }) as unknown as PrismaClient;
   }
   return new PrismaClient();

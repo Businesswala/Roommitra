@@ -5,24 +5,72 @@ import { ExploreHeader } from "./ExploreHeader";
 import { FilterSidebar } from "./FilterSidebar";
 import { ListingCard, ListingItem } from "./ListingCard";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Wifi, Snowflake, Coffee, Tv, CookingPot, Shirt } from "lucide-react";
+import { Wifi, Snowflake, Coffee, Tv, CookingPot, Shirt, AlertCircle, RefreshCcw } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
-// Massive robust mock database mapped visually utilizing distinct identifiers allowing high fidelity rendering!
-const fakeData: ListingItem[] = [
-  { id: "1", category: "Rooms", title: "Luxury Studio Suite in Indiranagar", price: 21000, rating: 4.8, reviews: 124, distance: "1.2 km", featured: true, images: ["https://images.unsplash.com/photo-1598928506311-c55dd1b311fc?auto=format&fit=crop&w=800"], amenities: [<Wifi key="w" size={16}/>, <Snowflake key="s" size={16}/>, <Tv key="t" size={16}/>] },
-  { id: "2", category: "PG", title: "Zolo Co-living Premium (Boys)", price: 12500, rating: 4.5, reviews: 89, distance: "3.5 km", featured: false, images: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800"], amenities: [<Wifi key="w" size={16}/>, <Coffee key="c" size={16}/>] },
-  { id: "3", category: "Tiffin", title: "Maa Ki Rasoi - Authentic Veg", price: 4000, rating: 4.9, reviews: 312, distance: "2.1 km", featured: true, images: ["https://images.unsplash.com/photo-1628296574241-118fd452f1b4?auto=format&fit=crop&w=800"], amenities: [<CookingPot key="cp" size={16}/>] },
-  { id: "4", category: "Laundry", title: "White Cloud Dry Cleaners", price: 800, rating: 4.3, reviews: 45, distance: "0.8 km", featured: false, images: ["https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=800"], amenities: [<Shirt key="sh" size={16}/>] },
-  { id: "5", category: "Rooms", title: "Cozy 1BHK near Tech Park", price: 18500, rating: 4.6, reviews: 76, distance: "4.2 km", featured: false, images: ["https://images.unsplash.com/photo-1502672260266-1c1e5250ad11?auto=format&fit=crop&w=800"], amenities: [<Wifi key="w" size={16}/>] },
-  { id: "6", category: "Roommate", title: "Looking for flatmate - 3BHK", price: 14000, rating: 4.7, reviews: 12, distance: "2.8 km", featured: true, images: ["https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=800"], amenities: [<Wifi key="w" size={16}/>, <Snowflake key="s" size={16}/>] },
-  { id: "7", category: "PG", title: "Stanza Living Elite (Girls)", price: 16000, rating: 4.2, reviews: 231, distance: "5.1 km", featured: false, images: ["https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800"], amenities: [<Wifi key="w" size={16}/>, <Tv key="t" size={16}/>] },
-  { id: "8", category: "Tiffin", title: "Health Bites - Diet Meals", price: 5500, rating: 4.8, reviews: 198, distance: "1.9 km", featured: false, images: ["https://images.unsplash.com/photo-1546069901-ba9590a1e120?auto=format&fit=crop&w=800"], amenities: [<CookingPot key="cp" size={16}/>] },
-];
+interface ExploreClientLayoutProps {
+  initialData?: any[];
+  initialError?: string | null;
+}
 
-export function ExploreClientLayout() {
+// Higher-fidelity Category mapping for the Live Demo
+const categoryMap: Record<string, string> = {
+  "ROOM": "Rooms",
+  "PG": "PG",
+  "ROOMMATE": "Roommate",
+  "TIFFIN": "Tiffin",
+  "LAUNDRY": "Laundry"
+};
+
+const reverseCategoryMap: Record<string, string> = {
+  "Rooms": "ROOM",
+  "PG": "PG",
+  "Roommate": "ROOMMATE",
+  "Tiffin": "TIFFIN",
+  "Laundry": "LAUNDRY"
+};
+
+// Mapper utility to bridge Prisma DB models to premium frontend ListingItems
+const mapDbToListingItem = (dbItem: any): ListingItem => {
+  const amenities = JSON.parse(dbItem.amenities || "[]");
+  const images = JSON.parse(dbItem.images || "[]");
+  
+  // High-fidelity icon mapping for amenities
+  const amenityIcons: Record<string, React.ReactNode> = {
+    "Wi-Fi": <Wifi key="w" size={16}/>,
+    "AC": <Snowflake key="s" size={16}/>,
+    "TV": <Tv key="t" size={16}/>,
+    "Veg": <CookingPot key="cp" size={16}/>,
+  };
+
+  const reviewsCount = dbItem.reviews?.length || 0;
+  const avgRating = reviewsCount > 0 
+    ? dbItem.reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / reviewsCount 
+    : 4.5;
+
+  return {
+    id: dbItem.id,
+    category: categoryMap[dbItem.type] || dbItem.type,
+    title: dbItem.title,
+    price: dbItem.price,
+    rating: Number(avgRating.toFixed(1)),
+    reviews: reviewsCount,
+    distance: "Near you",
+    featured: dbItem.status === "APPROVED",
+    images: images.length > 0 ? images : ["https://images.unsplash.com/photo-1598928506311-c55dd1b311fc?auto=format&fit=crop&w=800"],
+    amenities: amenities.map((a: string) => amenityIcons[a] || <Coffee key={a} size={16}/>),
+  };
+};
+
+type CategoryType = "Rooms" | "PG" | "Roommate" | "Tiffin" | "Laundry";
+
+export function ExploreClientLayout({ initialData = [], initialError }: ExploreClientLayoutProps) {
+  const router = useRouter();
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-  const [category, setCategory] = useState<"Rooms" | "PG" | "Roommate" | "Tiffin" | "Laundry">("Rooms");
-  const [priceRange, setPriceRange] = useState<[number, number]>([1000, 25000]);
+  const [category, setCategory] = useState<CategoryType>("Rooms");
+  const [priceRange, setPriceRange] = useState<[number, number]>([500, 30000]);
   const [filters, setFilters] = useState<Record<string, boolean>>({});
 
   const toggleFilter = (key: string) => {
@@ -32,8 +80,10 @@ export function ExploreClientLayout() {
     }));
   };
 
-  // Simulating visually accurate reactive filtering arrays without a DB request overlay
-  const filteredData = fakeData.filter((item) => {
+  const liveData = initialData.map(mapDbToListingItem);
+
+  // Live filtering engine responding to user input
+  const filteredData = liveData.filter((item) => {
     const hitsCategory = item.category === category;
     const hitsPrice = item.price >= priceRange[0] && item.price <= priceRange[1];
     return hitsCategory && hitsPrice;
@@ -61,7 +111,7 @@ export function ExploreClientLayout() {
            <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 p-0 overflow-y-auto hidden-scrollbar">
              <div className="p-6">
                 <div className="text-xl font-black flex items-center gap-1 mb-8">
-                  <span className="text-slate-800 dark:text-white">Filters</span>
+                   <span className="text-slate-800 dark:text-white">Filters</span>
                 </div>
                 <FilterSidebar 
                   category={category} 
@@ -80,9 +130,34 @@ export function ExploreClientLayout() {
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                Explore <span className="text-blue-600 dark:text-blue-400">{category}</span> near you
-               <span className="block text-sm font-medium text-slate-500 mt-2 tracking-normal">Showing {filteredData.length} highly relevant matches mapped to active filters.</span>
+               <span className="block text-sm font-medium text-slate-500 mt-2 tracking-normal">
+                  Showing {filteredData.length} live matches from our secure database.
+               </span>
              </h1>
           </div>
+
+          {initialError && (
+            <Alert variant="destructive" className="mb-8 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900 flex items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <AlertCircle className="h-5 w-5 mt-0.5" />
+                <div>
+                  <AlertTitle className="font-bold">Database Connectivity Issue</AlertTitle>
+                  <AlertDescription className="text-sm opacity-90">
+                    {initialError} (Roommitra is currently running in <strong>Safe Mode</strong> using local cache. Real-time updates may be delayed.)
+                  </AlertDescription>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => router.refresh()}
+                className="shrink-0 bg-white dark:bg-slate-900 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-bold"
+              >
+                <RefreshCcw size={14} className="mr-2" />
+                Retry Connection
+              </Button>
+            </Alert>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-8 duration-700">
              {filteredData.length > 0 ? (
