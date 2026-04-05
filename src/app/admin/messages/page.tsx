@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, ShieldAlert, Ban, Trash2, ShieldCheck, MailOpen } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
 
 // Note: These would normally come from the API payload
 interface AdminConversation {
@@ -29,25 +28,6 @@ export default function AdminMessagesDashboard() {
   const [conversations, setConversations] = useState<AdminConversation[]>(mockConversations);
   const [selectedConvo, setSelectedConvo] = useState<AdminConversation | null>(null);
   const [search, setSearch] = useState('');
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [liveMessages, setLiveMessages] = useState<any[]>([]);
-
-  useEffect(() => {
-    // Admin intercept socket connection
-    const newSocket = io();
-    setSocket(newSocket);
-    newSocket.emit('join-admin');
-
-    newSocket.on('admin-intercept', (data: any) => {
-      console.log('Intercepted Message:', data);
-      setLiveMessages((prev) => [...prev, data]);
-      // If it matches selected conversation, update the main panel view
-    });
-
-    return () => {
-      newSocket.disconnect();
-    };
-  }, []);
 
   return (
     <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden bg-background">
@@ -145,22 +125,6 @@ export default function AdminMessagesDashboard() {
                  </div>
                  <span className="text-xs text-muted-foreground ml-2">10:30 AM • {selectedConvo.userName}</span>
                </div>
-               
-               {/* Live Intercepted Messages */}
-               {liveMessages.filter(m => m.conversationId === selectedConvo.id).map((liveMsg, i) => (
-                  <div key={i} className="flex flex-col gap-1 w-full max-w-2xl mx-auto justify-end items-end">
-                     <div className="bg-primary text-primary-foreground rounded-2xl px-4 py-2 shadow-sm text-sm group relative">
-                       {liveMsg.message.message}
-                       
-                       <div className="absolute -left-10 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive rounded-full bg-card shadow-sm border border-border/50">
-                           <Trash2 className="h-3 w-3" />
-                         </Button>
-                       </div>
-                     </div>
-                     <span className="text-xs text-muted-foreground mr-2">Live • {liveMsg.message.senderId}</span>
-                  </div>
-               ))}
                
             </div>
           </>

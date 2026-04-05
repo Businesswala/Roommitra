@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Image as ImageIcon } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
 
 interface Message {
   id: string;
@@ -23,74 +22,59 @@ interface ChatBoxProps {
 }
 
 export default function ChatBox({ conversationId, currentUserId, otherUserName, initialMessages = [] }: ChatBoxProps) {
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputText, setInputText] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Polling for new messages
   useEffect(() => {
-    // Connect to custom server socket
-    const newSocket = io(); // Defaults to same host/port
-    setSocket(newSocket);
-
-    newSocket.emit('join-conversation', conversationId);
-
-    newSocket.on('receive-message', (newMessage: Message) => {
-      setMessages((prev) => [...prev, newMessage]);
-    });
-
-    newSocket.on('user-typing', (user: string) => {
-      if (user !== currentUserId) {
-        setIsTyping(true);
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(`/api/chat/messages/${conversationId}`);
+        const data = await res.json();
+        if (data.success) {
+          setMessages(data.messages);
+        }
+      } catch (err) {
+        console.error('Polling error', err);
       }
-    });
-
-    newSocket.on('user-stop-typing', (user: string) => {
-      if (user !== currentUserId) {
-        setIsTyping(false);
-      }
-    });
-
-    return () => {
-      newSocket.disconnect();
     };
-  }, [conversationId, currentUserId]);
+
+    fetchMessages(); // Initial fetch
+    const interval = setInterval(fetchMessages, 3000); // Poll every 3s
+
+    return () => clearInterval(interval);
+  }, [conversationId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [messages]);
 
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
-    const newMessage: Message = {
-      id: Math.random().toString(36).substr(2, 9), // Temp ID
-      senderId: currentUserId,
-      message: inputText,
-      type: 'text',
-      timestamp: new Date().toISOString()
-    };
-
-    // Optimistic UI update
-    setMessages((prev) => [...prev, newMessage]);
+    const messageContent = inputText;
     setInputText('');
-    socket?.emit('stop-typing', { conversationId, user: currentUserId });
 
-    // Send to Socket Server
-    socket?.emit('send-message', {
-      conversationId,
-      message: newMessage
-    });
-
-    // Also persist via API route (assuming typical DB saving)
+    // Persist via API route
     try {
-      await fetch('/api/chat/send', {
+      const res = await fetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversationId, senderId: currentUserId, message: newMessage.message }),
+        body: JSON.stringify({ conversationId, senderId: currentUserId, message: messageContent }),
       });
+      const data = await res.json();
+      if (data.success) {
+        // Trigger a re-fetch or optimistically update
+        setMessages((prev) => [...prev, {
+          id: Math.random().toString(),
+          senderId: currentUserId,
+          message: messageContent,
+          type: 'text',
+          timestamp: new Date().toISOString()
+        }]);
+      }
     } catch(err) {
       console.error('Failed to save message', err);
     }
@@ -98,11 +82,6 @@ export default function ChatBox({ conversationId, currentUserId, otherUserName, 
 
   const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
-    if (e.target.value) {
-      socket?.emit('typing', { conversationId, user: currentUserId });
-    } else {
-      socket?.emit('stop-typing', { conversationId, user: currentUserId });
-    }
   };
 
   return (
@@ -135,13 +114,6 @@ export default function ChatBox({ conversationId, currentUserId, otherUserName, 
             </div>
           );
         })}
-        {isTyping && (
-          <div className="flex w-full justify-start animate-pulse">
-            <div className="bg-muted border rounded-2xl px-4 py-2 text-xs italic text-muted-foreground text-opacity-75">
-              Typing...
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </CardContent>
 

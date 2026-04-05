@@ -7,14 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send, Search, CheckCheck, MoreVertical, Phone, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useSocket } from "@/components/providers/SocketProvider";
 import { GetConversations, GetMessages, SendMessage } from "@/app/actions/chat";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 export default function MessagesInbox() {
   const { user, profile, loading: authLoading } = useAuth();
-  const { socket, isConnected } = useSocket();
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -38,41 +36,31 @@ export default function MessagesInbox() {
     }
   }, [user]);
 
-  // 2. Fetch Messages when Active Conversation changes
+  // 2. Polling for Messages
   useEffect(() => {
     if (activeConversationId) {
       const fetchMsgs = async () => {
-        const data = await GetMessages(activeConversationId);
-        setMessages(data);
-      };
-      fetchMsgs();
-
-      // Join Socket Room
-      if (socket) {
-        socket.emit('join-conversation', activeConversationId);
-      }
-    }
-  }, [activeConversationId, socket]);
-
-  // 3. Listen for Incoming Messages
-  useEffect(() => {
-    if (socket) {
-      const handleReceive = (msg: any) => {
-        if (msg.conversationId === activeConversationId) {
-          setMessages(prev => [...prev, msg]);
+        try {
+          const data = await GetMessages(activeConversationId);
+          setMessages(data);
+          
+          // Update last message in conversation list
+          if (data.length > 0) {
+            const lastMsg = data[data.length - 1];
+            setConversations(prev => prev.map(c => 
+              c.id === activeConversationId ? { ...c, messages: [lastMsg] } : c
+            ));
+          }
+        } catch (err) {
+          console.error("Fetch error", err);
         }
-        // Update last message in conversation list
-        setConversations(prev => prev.map(c => 
-          c.id === msg.conversationId ? { ...c, messages: [msg] } : c
-        ));
       };
 
-      socket.on('receive-message', handleReceive);
-      return () => {
-        socket.off('receive-message', handleReceive);
-      };
+      fetchMsgs(); // Initial fetch
+      const interval = setInterval(fetchMsgs, 3000); // Poll every 3s
+      return () => clearInterval(interval);
     }
-  }, [socket, activeConversationId]);
+  }, [activeConversationId]);
 
   // Scroll to bottom
   useEffect(() => {
@@ -97,16 +85,11 @@ export default function MessagesInbox() {
       status: 'sent'
     };
 
-    // 1. Optimistic Update
+    // Optimistic Update
     setMessages(prev => [...prev, { ...msgData, id: Date.now().toString() }]);
     setInputText("");
 
-    // 2. Socket Emit
-    if (socket) {
-      socket.emit('send-message', { conversationId: activeConversationId, message: msgData });
-    }
-
-    // 3. Persistence
+    // Persistence
     const result = await SendMessage(msgData);
     if (!result.success) {
       toast.error("Failed to send message: " + result.error);
@@ -145,9 +128,6 @@ export default function MessagesInbox() {
             <span className="text-blue-600 dark:text-blue-500">Room</span>
             <span className="text-orange-500">mitra</span>
           </div>
-          {!isConnected && (
-            <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full animate-pulse">Offline</span>
-          )}
         </div>
         <ThemeToggle />
       </header>
