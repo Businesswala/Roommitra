@@ -18,7 +18,7 @@ export function Hero() {
   const handleSearch = () => {
     const params = new URLSearchParams({
       location,
-      category,
+      type: category,
       minPrice: priceRange[0].toString(),
       maxPrice: priceRange[1].toString(),
     });
