@@ -14,40 +14,41 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  const supabase = createServerClient(
-    url,
-    anonKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-            supabaseResponse = NextResponse.next({
-              request,
-            })
-            cookiesToSet.forEach(({ name, value, options }) =>
-              supabaseResponse.cookies.set(name, value, options)
-            )
-          } catch (e) {
-            // Safe to ignore in edge context
-          }
-        },
-      },
-    }
-  )
-
   try {
+    const supabase = createServerClient(
+      url,
+      anonKey,
+      {
+        cookies: {
+          getAll() {
+            try {
+              return request.cookies.getAll()
+            } catch {
+              return []
+            }
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+              supabaseResponse = NextResponse.next({
+                request,
+              })
+              cookiesToSet.forEach(({ name, value, options }) =>
+                supabaseResponse.cookies.set(name, value, options)
+              )
+            } catch (e) {
+              // Safe to ignore in certain edge contexts
+            }
+          },
+        },
+      }
+    )
+
     // refreshing the auth token
     await supabase.auth.getUser()
   } catch (e) {
-    console.error("[MIDDLEWARE AUTH ERROR]:", e);
+    console.error("[MIDDLEWARE AUTH CRITICAL FAULT]:", e);
   }
-
-  // protected routes logic could go here, but I'll keep it simple for now
-  // and handle redirection in the root middleware file.
 
   return supabaseResponse
 }

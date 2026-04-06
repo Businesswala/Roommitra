@@ -8,10 +8,16 @@ export async function createClient() {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
-    console.warn("[SUPABASE SERVER ERROR]: Missing environment variables in server context.");
-    // Returning a dummy client that will likely return null/error on auth calls
-    // but prevents the page from hard-crashing during SSR.
-    return createServerClient("", "", { cookies: { getAll: () => [], setAll: () => {} }});
+    console.warn("[SUPABASE SERVER ERROR]: Missing Credentials. Returning Safely Bypassed Client.");
+    // Absolutely avoid calling createServerClient if the URL is missing as it WILL throw.
+    return {
+      auth: {
+        getUser: async () => ({ data: { user: null }, error: null }),
+        getSession: async () => ({ data: { session: null }, error: null }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      },
+      from: () => ({ select: () => ({ eq: () => ({ single: () => ({ data: null, error: null }) }) }) }),
+    } as any;
   }
 
   return createServerClient(
@@ -28,7 +34,7 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // Handled in middleware
+            // Handled in middleware/proxy
           }
         },
       },

@@ -7,7 +7,6 @@ import { createServerClient } from '@supabase/ssr'
  */
 export default async function proxy(request: NextRequest) {
   try {
-    // 1. Refresh the Supabase session first
     const supabaseResponse = await updateSession(request)
     
     // 2. Extract Auth Session for Role-Based Gating
@@ -15,7 +14,7 @@ export default async function proxy(request: NextRequest) {
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!url || !anonKey) {
-      return supabaseResponse; // Bypass if credentials missing to avoid 500
+      return supabaseResponse;
     }
 
     const supabase = createServerClient(
@@ -24,7 +23,11 @@ export default async function proxy(request: NextRequest) {
       {
         cookies: {
           getAll() {
-            return request.cookies.getAll()
+            try {
+              return request.cookies.getAll()
+            } catch {
+              return []
+            }
           },
         },
       }
@@ -43,26 +46,25 @@ export default async function proxy(request: NextRequest) {
     }
 
     // B. Protected Route Authorization (Gating by Sector)
-    
-    // Admin Sector Protection
     if (path.startsWith('/admin') && role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
-    // Lister Sector Protection
     if (path.startsWith('/lister') && role !== 'LISTER') {
       if (!user) return NextResponse.redirect(new URL('/login', request.url))
       return NextResponse.redirect(new URL('/', request.url))
     }
 
-    // Seeker Sector Protection
     if (path.startsWith('/user') && !user) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
     return supabaseResponse
-  } catch (error) {
-    console.error("[MIDDLEWARE CRITICAL ERROR]:", error);
+  } catch (error: any) {
+    // If it's a redirect error from Next.js, we must propagate it
+    if (error?.digest?.includes('NEXT_REDIRECT')) throw error;
+    
+    console.error("[PROXY CRITICAL FAULT]:", error);
     return NextResponse.next();
   }
 }
