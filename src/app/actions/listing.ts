@@ -210,3 +210,29 @@ export async function getListingById(id: string) {
     });
   }, `Fetching listing detail: ${id}`);
 }
+
+/**
+ * Fetch latest 3 bookings for the logged-in lister
+ */
+export async function getRecentListerBookings() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { data: [], error: "Unauthorized" };
+
+  return await dbCall(async (db: any) => {
+    const profile = await db.profile.findUnique({ where: { supabaseId: user.id } });
+    if (!profile) return [];
+    
+    return await db.booking.findMany({
+      where: { 
+        listing: { listerId: profile.id } 
+      },
+      take: 3,
+      orderBy: { createdAt: 'desc' },
+      include: { 
+        user: true, 
+        listing: true 
+      }
+    });
+  }, "Fetching recent lister bookings");
+}

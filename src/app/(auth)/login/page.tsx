@@ -126,9 +126,9 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 p-10">
-            <Tabs defaultValue="USER" onValueChange={(v) => setRoleMode(v as any)} className="w-full">
+            <Tabs value={roleMode} onValueChange={(v) => setRoleMode(v as any)} className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-8 bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-2xl">
-                <TabsTrigger className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest" value="USER">User</TabsTrigger>
+                <TabsTrigger className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest" value="USER">Seeker</TabsTrigger>
                 <TabsTrigger className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest" value="LISTER">Lister</TabsTrigger>
                 <TabsTrigger className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-[10px] uppercase tracking-widest" value="ADMIN">Admin</TabsTrigger>
               </TabsList>

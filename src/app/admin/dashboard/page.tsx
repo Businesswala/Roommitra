@@ -1,11 +1,50 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, TrendingUp, DollarSign, Home, CheckSquare, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { getSystemStats, getGrowthData } from "@/app/actions/admin";
 import { AdminCharts } from "@/components/admin/AdminCharts";
+import { createClient } from "@/utils/supabase/client";
 
-export default async function AdminDashboard() {
-  const { data: stats, error } = await getSystemStats();
-  const { data: growth, error: growthError } = await getGrowthData();
+export default function AdminDashboard() {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+  const [growth, setGrowth] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const [statsResult, growthResult] = await Promise.all([
+          getSystemStats(),
+          getGrowthData()
+        ]);
+
+        if (statsResult.error) setError(statsResult.error);
+        else setStats(statsResult.data);
+        
+        setGrowth(growthResult.data);
+      } catch (err) {
+        console.error("Admin Dashboard Fetch Fault:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   const metrics = [
     { title: "Total Users", value: stats?.users || 0, icon: Users, color: "text-blue-600", bg: "bg-blue-100 dark:bg-blue-900/40" },

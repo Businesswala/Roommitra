@@ -1,48 +1,56 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { 
-  TrendingUp, 
-  Home, 
-  Eye, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle,
-  Users,
-  Wallet,
-  ArrowRight
+  TrendingUp, Home, Eye, CheckCircle, Clock, AlertCircle, Users, Wallet, ArrowRight 
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getListerStats } from "@/app/actions/listing";
-import { dbCall } from "@/lib/db-utils";
-import { createClient } from "@/utils/supabase/server";
+import { getListerStats, getRecentListerBookings } from "@/app/actions/listing";
+import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 
-export default async function OverviewPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+export default function OverviewPage() {
+  const [loading, setLoading] = useState(true);
+  const [statsData, setStatsData] = useState<any>(null);
+  const [recentBookings, setRecentBookings] = useState<any[]>([]);
+  const supabase = createClient();
 
-  const [statsResult, recentBookingsResult] = await Promise.all([
-    getListerStats(),
-    dbCall(async (db: any) => {
-      const profile = await db.profile.findUnique({ where: { supabaseId: user.id } });
-      if (!profile) return [];
-      return await db.booking.findMany({
-        where: { listing: { listerId: profile.id } },
-        take: 3,
-        orderBy: { createdAt: 'desc' },
-        include: { user: true, listing: true }
-      });
-    }, "Recent bookings")
-  ]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
 
-  const statsData = statsResult.data;
-  const recentBookings = recentBookingsResult.data || [];
+        const [statsResult, bookingsResult] = await Promise.all([
+          getListerStats(),
+          getRecentListerBookings()
+        ]);
+
+        setStatsData(statsResult.data);
+        setRecentBookings(bookingsResult.data || []);
+      } catch (error) {
+        console.error("Lister Dashboard Fetch Error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const stats = [
     { title: "Active Assets", value: statsData?.active || "0", icon: Home, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
     { title: "Moderation Queue", value: statsData?.pending || "0", icon: Clock, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-900/20" },
-    { title: "Total Bookings", value: (statsData as any)?.totalBookings || "0", icon: Users, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
+    { title: "Total Bookings", value: statsData?.totalBookings || "0", icon: Users, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-900/20" },
     { title: "Verified Identity", value: statsData?.status || "ACTIVE", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
   ];
 
