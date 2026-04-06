@@ -5,21 +5,28 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/utils/supabase/server";
 
 export async function getListings(type?: string) {
-  return await dbCall(async (db) => {
-    return await db.listing.findMany({
-      where: {
-        type: type ? type : undefined,
-        status: "APPROVED"
-      },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        reviews: true,
-        lister: {
-          select: { name: true }
+  try {
+    const result = await dbCall(async (db) => {
+      return await db.listing.findMany({
+        where: {
+          type: type ? type : undefined,
+          status: "APPROVED"
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          reviews: true,
+          lister: {
+            select: { name: true }
+          }
         }
-      }
-    });
-  }, "Fetching all listings");
+      });
+    }, "Fetching all listings");
+    
+    return { data: result.data || [], error: result.error };
+  } catch (outerError: any) {
+    console.error("[LISTINGS_ACTION_CRITICAL]:", outerError);
+    return { data: [], error: outerError.message || "System fault in retrieval engine." };
+  }
 }
 
 export async function createListing(formData: FormData) {

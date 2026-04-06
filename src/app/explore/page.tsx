@@ -7,7 +7,9 @@ export const metadata = {
 };
 
 export default async function ExplorePage() {
-  const { data, error } = await getListings();
+  const result = await getListings();
+  const data = (result as any).data || [];
+  const error = (result as any).error || null;
 
-  return <ExploreClientLayout initialData={data || []} initialError={error} />;
+  return <ExploreClientLayout initialData={data} initialError={error} />;
 }

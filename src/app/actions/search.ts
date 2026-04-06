@@ -16,11 +16,10 @@ interface SearchParams {
  * Core Dynamic Search Engine
  */
 export async function searchListings(params: SearchParams) {
-  const { type, minPrice, maxPrice, amenities, location, limit = 12, offset = 0 } = params;
+  try {
+    const { type, minPrice, maxPrice, amenities, location, limit = 12, offset = 0 } = params;
 
-  return await dbCall(async (db) => {
-    try {
-      // 1. Construct Where clause with standard Array-based AND structure for stability
+    const result = await dbCall(async (db) => {
       const andConditions: any[] = [{ status: "APPROVED" }];
 
       if (type && type !== 'ALL') {
@@ -55,7 +54,6 @@ export async function searchListings(params: SearchParams) {
 
       const where = { AND: andConditions };
 
-      // 2. Execute Query with performance tracking
       const [listings, total] = await Promise.all([
         db.listing.findMany({
           where,
@@ -70,11 +68,10 @@ export async function searchListings(params: SearchParams) {
         db.listing.count({ where })
       ]);
 
-      // 3. Transform for UI (Calculate average rating)
       const items = listings.map(l => {
         const avgRating = l.reviews.length > 0 
           ? l.reviews.reduce((acc, curr) => acc + curr.rating, 0) / l.reviews.length 
-          : 4.5; // Default for search aesthetic
+          : 4.5;
           
         return {
           ...l,
@@ -84,11 +81,19 @@ export async function searchListings(params: SearchParams) {
       });
 
       return { items, total };
-    } catch (innerError: any) {
-      console.error("[SEARCH INDEX ENGINE CRASH]:", innerError);
-      throw innerError; // Rethrow to let dbCall handle it with context
-    }
-  }, "Executing Search Index Query");
+    }, "Executing Search Index Query");
+
+    return { 
+      data: result.data || { items: [], total: 0 }, 
+      error: result.error 
+    };
+  } catch (outerError: any) {
+    console.error("[SEARCH ACTION CRITICAL]:", outerError);
+    return { 
+      data: { items: [], total: 0 }, 
+      error: outerError.message || "System fault in retrieval engine." 
+    };
+  }
 }
 
 /**

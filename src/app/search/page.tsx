@@ -61,11 +61,12 @@ function SearchContent() {
       limit: 20
     });
 
-    if (result.error) {
-      toast.error(result.error);
+    const searchResult = result as any;
+    if (searchResult.error) {
+      toast.error(searchResult.error);
     } else {
-      setResults(result.data?.items || []);
-      setTotal(result.data?.total || 0);
+      setResults(searchResult.data?.items || []);
+      setTotal(searchResult.data?.total || 0);
     }
     setLoading(false);
   }, [searchParams, selectedAmenities]);
