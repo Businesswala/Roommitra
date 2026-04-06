@@ -75,6 +75,23 @@ export default function SeekerDashboard() {
   }
 
   // Final Dashboard Render (Client Component)
+  if (!user && !loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white p-6 text-center">
+        <div className="space-y-4">
+          <p className="text-red-500 font-bold text-xl">Authentication Fault Detected</p>
+          <p className="text-slate-500">No user data found in the session matrix. Please log in again.</p>
+          <button 
+            onClick={() => router.push("/login")}
+            className="h-12 px-8 bg-blue-600 text-white rounded-xl font-bold"
+          >
+            Return to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SeekerDashboardContent 
       initialProfile={profile}

@@ -24,13 +24,16 @@ interface SeekerDashboardContentProps {
 
 export function SeekerDashboardContent({ initialProfile, initialSaved, initialBookings }: SeekerDashboardContentProps) {
   const [activeTab, setActiveTab] = useState<"saved" | "bookings" | "settings">("saved");
-  const [profile, setProfile] = useState(initialProfile);
+  const [profile, setProfile] = useState(initialProfile || { name: "Guest", mobile: "" });
   const [updating, setUpdating] = useState(false);
+
+  // CRITICAL SAFETY SHIELD: Do not render UI if profile identity is missing
+  if (!profile) return null;
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setUpdating(true);
-    const result = await updateProfile({ name: profile.name, mobile: profile.mobile });
+    const result = await updateProfile({ name: profile.name || "Guest", mobile: profile.mobile || "" });
     setUpdating(false);
     if (!result.error) toast.success("Profile status successfully updated!");
     else toast.error(result.error);
@@ -52,10 +55,10 @@ export function SeekerDashboardContent({ initialProfile, initialSaved, initialBo
          <div className="p-8">
             <div className="flex items-center gap-4 mb-10 p-4 rounded-3xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 shadow-inner">
                <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-600/20">
-                  {profile.name?.[0].toUpperCase()}
+                  {profile?.name?.[0]?.toUpperCase() || "U"}
                </div>
                <div className="min-w-0">
-                  <h3 className="font-black text-slate-900 dark:text-white truncate">{profile.name}</h3>
+                  <h3 className="font-black text-slate-900 dark:text-white truncate">{profile?.name || "User"}</h3>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Seeker Portal</p>
                </div>
             </div>
@@ -139,10 +142,10 @@ export function SeekerDashboardContent({ initialProfile, initialSaved, initialBo
                                 <Wallet className="h-8 w-8 text-blue-600" />
                              </div>
                              <div>
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-1">{booking.listing.title}</h3>
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-1">{booking.listing?.title || "Property"}</h3>
                                 <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                   <span className="flex items-center gap-1.5"><MapPin size={14} className="text-blue-500" /> {booking.listing.address || 'Hyperlocal'}</span>
-                                   <span className="flex items-center gap-1.5"><User size={14} className="text-orange-500" /> By: {booking.listing.lister.name}</span>
+                                   <span className="flex items-center gap-1.5"><MapPin size={14} className="text-blue-500" /> {booking.listing?.address || 'Hyperlocal'}</span>
+                                   <span className="flex items-center gap-1.5"><User size={14} className="text-orange-500" /> By: {booking.listing?.lister?.name || "Lister"}</span>
                                 </div>
                              </div>
                           </div>
@@ -198,26 +201,26 @@ export function SeekerDashboardContent({ initialProfile, initialSaved, initialBo
                         <div className="space-y-2">
                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Identity Identifier</Label>
                            <Input 
-                             value={profile.name}
+                             value={profile?.name || ""}
                              onChange={(e) => setProfile({...profile, name: e.target.value})}
                              className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-950 border-0 focus-visible:ring-2 focus-visible:ring-blue-600 font-bold" 
                            />
                         </div>
                         <div className="space-y-2">
                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Access Channel (Email)</Label>
-                           <Input disabled value={profile.email} className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-950 border-0 opacity-50 font-bold" />
+                           <Input disabled value={profile?.email || ""} className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-950 border-0 opacity-50 font-bold" />
                         </div>
                         <div className="space-y-2">
                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Secure Mobile Matrix</Label>
                            <Input 
-                             value={profile.mobile}
+                             value={profile?.mobile || ""}
                              onChange={(e) => setProfile({...profile, mobile: e.target.value})}
                              className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-950 border-0 focus-visible:ring-2 focus-visible:ring-blue-600 font-bold" 
                            />
                         </div>
                         <div className="space-y-2">
                            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Created Sequence</Label>
-                           <Input disabled value={format(new Date(profile.createdAt), 'MMM dd, yyyy')} className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-950 border-0 opacity-50 font-bold" />
+                           <Input disabled value={profile?.createdAt ? format(new Date(profile.createdAt), 'MMM dd, yyyy') : "N/A"} className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-950 border-0 opacity-50 font-bold" />
                         </div>
                      </div>
                      <Button disabled={updating} className="w-full h-16 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-black transition-all shadow-2xl active:scale-[0.98]">
