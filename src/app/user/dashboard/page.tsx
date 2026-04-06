@@ -49,14 +49,14 @@ function ErrorState({ message }: { message: string }) {
 }
 
 export default async function SeekerDashboard() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      redirect("/login");
+    }
+
     // Fetch real data for the dashboard with parallel promise execution
     const [savedData, bookingsData, profileData] = await Promise.all([
       getSavedListings().catch(e => ({ data: [], error: e.message })),
@@ -70,18 +70,14 @@ export default async function SeekerDashboard() {
     const bookings = bookingsData.data || [];
     const profile = profileData.data;
 
-    // Handle missing profile - redirect to registration for a fresh user
     if (!profile && !profileData.error) {
       redirect("/register");
     }
 
-    // If there was a hard database error, we show the ErrorState
     if (profileData.error) {
       return <ErrorState message={profileData.error} />;
     }
 
-    // Absolute fallback: provide a mock "Safe Profile" if everything else fails 
-    // but we have a user session. This prevents a 500 crash on render.
     const safeProfile = profile || {
       name: user.email?.split("@")[0] || "User",
       email: user.email,
@@ -98,7 +94,8 @@ export default async function SeekerDashboard() {
       />
     );
   } catch (error: any) {
+    if (error?.digest?.includes("NEXT_REDIRECT")) throw error;
     console.error("[CRITICAL DASHBOARD ERROR]:", error);
-    return <ErrorState message={error.message || "An unexpected system fault occurred."} />;
+    return <ErrorState message={error.message || "An unexpected system fault occurred during the dashboard handshake."} />;
   }
 }

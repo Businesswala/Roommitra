@@ -1,15 +1,16 @@
 import path from 'path'
 import dotenv from 'dotenv'
 
-// Explicitly load .env from root
-dotenv.config({ path: path.join(__dirname, '../.env') })
+// 1. LOAD ENVIRONMENT FIRST (Bulletproof for CLI)
+const envPath = path.join(__dirname, '../.env')
+dotenv.config({ path: envPath })
 
-import { PrismaClient, Role } from '@prisma/client'
-
-// Check connection string
+// 2. DIAGNOSTICS
 console.log('--- SEED DIAGNOSTICS ---');
-console.log('Current Dir:', __dirname);
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'FOUND' : 'MISSING');
+console.log('DATABASE_URL Found:', !!process.env.DATABASE_URL);
+
+// 3. IMPORT CLIENT & TYPES
+import { PrismaClient, Role } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
