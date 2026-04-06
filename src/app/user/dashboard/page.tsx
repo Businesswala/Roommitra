@@ -50,52 +50,77 @@ function ErrorState({ message }: { message: string }) {
 
 export default async function SeekerDashboard() {
   try {
+    // 1. Supabase Session Handshake (Critical)
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { dataSession, errorSession } = await (async () => {
+       try {
+         const { data: { user } } = await supabase.auth.getUser();
+         return { dataSession: user, errorSession: null };
+       } catch (e: any) {
+         return { dataSession: null, errorSession: e };
+       }
+    })();
 
-    if (!user) {
+    if (!dataSession) {
       redirect("/login");
     }
 
-    // Fetch real data for the dashboard with parallel promise execution
-    const [savedData, bookingsData, profileData] = await Promise.all([
-      getSavedListings().catch(e => ({ data: [], error: e.message })),
-      getSeekerBookings().catch(e => ({ data: [], error: e.message })),
-      dbCall(async (db) => {
-         return await db.profile.findUnique({ where: { supabaseId: user.id } });
-      }, "Fetching user profile").catch(e => ({ data: null, error: e.message }))
-    ]);
+    const user = dataSession;
 
-    const savedListings = savedData.data || [];
-    const bookings = bookingsData.data || [];
-    const profile = profileData.data;
+    // 2. Data Retrieval Grid (Fault-Tolerant)
+    try {
+      const [savedData, bookingsData, profileData] = await Promise.all([
+        getSavedListings().catch(() => ({ data: [] })),
+        getSeekerBookings().catch(() => ({ data: [] })),
+        dbCall(async (db) => {
+           return await db.profile.findUnique({ where: { supabaseId: user.id } });
+        }, "Dashboard Profile Fetch").catch(() => ({ data: null }))
+      ]);
 
-    if (!profile && !profileData.error) {
-      redirect("/register");
+      const profile = profileData?.data || profileData; // Handle both direct and wrapped returns
+
+      // If we have a profile, we render the full dashboard
+      if (profile) {
+        return (
+          <SeekerDashboardContent 
+            initialProfile={profile}
+            initialSaved={savedData?.data || []}
+            initialBookings={bookingsData?.data || []}
+          />
+        );
+      }
+      
+      // Fallback for Missing Profile in DB
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-white p-6">
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-bold text-slate-900">Welcome, {user.email?.split('@')[0]}!</h1>
+            <p className="text-slate-500">Your dashboard is initializing. Please complete your registration.</p>
+            <Link href="/register">
+              <Button className="mt-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Complete Setup</Button>
+            </Link>
+          </div>
+        </div>
+      );
+
+    } catch (dbError) {
+      console.error("[DASHBOARD DATABASE ERROR]:", dbError);
+      // Requested Fallback UI for Database Errors
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-white p-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold text-slate-900">Welcome!</h1>
+            <p className="text-slate-500">Your dashboard is loading... Please refresh in a moment.</p>
+            <Button variant="ghost" className="mt-4 animate-pulse">
+              Syncing with secure grid...
+            </Button>
+          </div>
+        </div>
+      );
     }
-
-    if (profileData.error) {
-      return <ErrorState message={profileData.error} />;
-    }
-
-    const safeProfile = profile || {
-      name: user.email?.split("@")[0] || "User",
-      email: user.email,
-      mobile: "Not Provided",
-      createdAt: new Date().toISOString(),
-      role: "SEEKER"
-    };
-
-    return (
-      <SeekerDashboardContent 
-        initialProfile={safeProfile}
-        initialSaved={savedListings}
-        initialBookings={bookings}
-      />
-    );
-  } catch (error: any) {
-    if (error?.digest?.includes("NEXT_REDIRECT")) throw error;
-    console.error("[CRITICAL DASHBOARD ERROR]:", error);
-    return <ErrorState message={error.message || "An unexpected system fault occurred during the dashboard handshake."} />;
+  } catch (globalError: any) {
+    if (globalError?.digest?.includes("NEXT_REDIRECT")) throw globalError;
+    console.error("[DASHBOARD GLOBAL FATAL]:", globalError);
+    return redirect("/login");
   }
 }
