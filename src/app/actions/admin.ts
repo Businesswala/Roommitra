@@ -24,7 +24,7 @@ export async function getSystemStats() {
       users: userCount,
       listings: listingCount,
       bookings: bookingCount,
-      revenue: totalRevenue._sum.grossAmount || 0,
+      revenue: (totalRevenue as any)?._sum?.grossAmount || 0,
       timestamp: new Date().toISOString()
     };
   }, "Fetching system stats");

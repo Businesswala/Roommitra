@@ -48,7 +48,7 @@ export function Hero() {
 
         <div className="mt-8 flex flex-wrap justify-center gap-4">
           <Link 
-            href="/register" 
+            href="/register?role=lister" 
             className="inline-flex items-center justify-center rounded-xl bg-orange-500 px-8 py-3 text-sm font-black text-white shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all hover:scale-105 active:scale-95"
           >
             List Your Property

@@ -48,15 +48,21 @@ export default async function proxy(request: NextRequest) {
     )
 
     const { data: { user } } = await supabase.auth.getUser()
+    // Strict identity check: user must have an ID to be considered 'logged in'
     const isLoggedIn = !!user?.id;
     const role = user?.user_metadata?.role || 'USER'
 
     // 3. Routing Protection Grid
     
-    // Guest Access Gating (If already logged in, move to dashboard)
-    if (isLoggedIn && (path === '/login' || path === '/register')) {
+    // Guest Access Gating (Allow reaching /register even with a session to avoid loops)
+    if (isLoggedIn && (path === '/login')) {
       const target = role === 'ADMIN' ? '/admin/dashboard' : role === 'LISTER' ? '/lister/dashboard' : '/user/dashboard'
       return NextResponse.redirect(new URL(target, request.url))
+    }
+
+    // Explicitly allow registration page access even if logged in to prevent back-and-forth loops
+    if (path === '/register') {
+      return supabaseResponse;
     }
 
     // Sector Protection
