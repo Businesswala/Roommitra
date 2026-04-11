@@ -29,8 +29,8 @@ export async function searchListings(params: SearchParams) {
       if (location) {
         andConditions.push({ 
           OR: [
-            { address: { contains: location, mode: 'insensitive' } },
-            { title: { contains: location, mode: 'insensitive' } }
+            { address: { contains: location } },
+            { title: { contains: location } }
           ]
         });
       }
@@ -47,7 +47,7 @@ export async function searchListings(params: SearchParams) {
       if (amenities && amenities.length > 0) {
         amenities.forEach(amenity => {
           andConditions.push({
-            amenities: { contains: amenity, mode: 'insensitive' }
+            amenities: { contains: amenity }
           });
         });
       }
