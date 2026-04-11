@@ -58,7 +58,7 @@ export default function AdminDashboard() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Welcome to Admin Panel</h1>
-          <p className="text-slate-500 mt-1 font-medium">Real-time metrics and growth vectors.</p>
+          <p className="text-slate-500 mt-1 font-medium">Real-time metrics and growth vectors. Admin Panel Active.</p>
         </div>
         <div className="flex items-center gap-2 text-sm font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg border border-emerald-200 dark:border-emerald-500/20 shadow-sm">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -87,6 +87,30 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="mt-8 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-800">
+        <h2 className="text-xl font-bold mb-4">Properties Overview (Placeholder)</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b bg-slate-50 dark:bg-slate-800 text-slate-500">
+              <tr>
+                <th className="p-4">Property Name</th>
+                <th className="p-4">Location</th>
+                <th className="p-4">Status</th>
+                <th className="p-4">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b dark:border-slate-800">
+                <td className="p-4">Demo PG Property</td>
+                <td className="p-4">Delhi</td>
+                <td className="p-4"><span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg">Active</span></td>
+                <td className="p-4">View</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {growth && <AdminCharts bookingData={growth} revenueData={growth} />}

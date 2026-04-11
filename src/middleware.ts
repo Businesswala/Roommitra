@@ -5,7 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 /**
  * Next.js Proxy/Middleware - Standardizing session & role-based routing
  */
-export default async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // 1. Absolute Bypass for Infrastructure & API
@@ -54,38 +54,36 @@ export default async function proxy(request: NextRequest) {
 
     // 3. Routing Protection Grid
     
-    // Guest Access Gating (Allow reaching /register even with a session to avoid loops)
+    // Strict Guest Access Gating - Ensure no active session redirects immediately
+    if (path.startsWith('/user') || path.startsWith('/lister') || path.startsWith('/admin')) {
+      if (!isLoggedIn) {
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
+    }
+
     if (isLoggedIn && (path === '/login')) {
       const target = role === 'ADMIN' ? '/admin/dashboard' : role === 'LISTER' ? '/lister/dashboard' : '/user/dashboard'
       return NextResponse.redirect(new URL(target, request.url))
     }
 
-    // Explicitly allow registration page access even if logged in to prevent back-and-forth loops
     if (path === '/register') {
       return supabaseResponse;
     }
 
-    // Sector Protection
-    const isDev = process.env.NODE_ENV !== 'production';
-
-    if (path.startsWith('/admin') && role !== 'ADMIN' && !isDev) {
-      return NextResponse.redirect(new URL('/', request.url))
+    // Shielding dashboards from incorrect roles
+    if (path.startsWith('/admin') && role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/user/dashboard', request.url))
     }
 
-    if (path.startsWith('/lister') && role !== 'LISTER' && !isDev) {
-      if (!isLoggedIn) return NextResponse.redirect(new URL('/login', request.url))
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-
-    if (path.startsWith('/user') && !isLoggedIn && !isDev) {
-      return NextResponse.redirect(new URL('/login', request.url))
+    if (path.startsWith('/lister') && role !== 'LISTER') {
+      return NextResponse.redirect(new URL('/user/dashboard', request.url))
     }
 
     return supabaseResponse
   } catch (error: any) {
     if (error?.digest?.includes('NEXT_REDIRECT')) throw error;
-    console.error("[PROXY CRITICAL FAULT]:", error);
-    return NextResponse.next();
+    console.error("[MIDDLEWARE CRITICAL FAULT]:", error);
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 }
 
