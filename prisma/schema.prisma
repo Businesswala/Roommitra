@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
 }
 
 enum Role {
@@ -17,7 +17,7 @@ enum Role {
 }
 
 model Profile {
-  id             String       @id @default(uuid())
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
   supabaseId     String       @unique
   email          String       @unique
   name           String
@@ -47,8 +47,8 @@ model Profile {
 // -----------------------------------------------------------------------------
 
 model Listing {
-  id          String   @id @default(uuid())
-  listerId    String
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  listerId    String   @db.ObjectId
   title       String
   type        String   // ROOM, PG, TIFFIN, LAUNDRY
   price       Float
@@ -75,9 +75,9 @@ model Listing {
 // -----------------------------------------------------------------------------
 
 model Booking {
-  id          String   @id @default(uuid())
-  userId      String
-  listingId   String
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  listingId   String   @db.ObjectId
 
   date        DateTime
   amount      Float
@@ -92,18 +92,18 @@ model Booking {
 }
 
 model PaymentLedger {
-  id            String   @id @default(uuid())
-  bookingId     String   @unique
-  transactionHash String @unique
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  bookingId       String   @unique @db.ObjectId
+  transactionHash String   @unique
   
-  grossAmount   Float
-  platformFee   Float    // Calculated as 5% usually
-  netToLister   Float
+  grossAmount     Float
+  platformFee     Float    // Calculated as 5% usually
+  netToLister     Float
 
-  gatewayStatus String   @default("PENDING") // PENDING, SUCCEEDED, FAILED
+  gatewayStatus   String   @default("PENDING") // PENDING, SUCCEEDED, FAILED
 
-  booking       Booking  @relation(fields: [bookingId], references: [id])
-  createdAt     DateTime @default(now())
+  booking         Booking  @relation(fields: [bookingId], references: [id])
+  createdAt       DateTime @default(now())
 }
 
 // -----------------------------------------------------------------------------
@@ -111,9 +111,9 @@ model PaymentLedger {
 // -----------------------------------------------------------------------------
 
 model Review {
-  id          String   @id @default(uuid())
-  userId      String
-  listingId   String
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  listingId   String   @db.ObjectId
 
   rating      Int      // 1-5
   content     String
@@ -124,7 +124,7 @@ model Review {
 }
 
 model Offer {
-  id          String   @id @default(uuid())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   type        String   // BANNER, DISCOUNT
   discountPct Float?
@@ -136,7 +136,7 @@ model Offer {
 }
 
 model Notification {
-  id          String   @id @default(uuid())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   title       String
   body        String
   target      String   // ALL, SEEKERS, LISTERS
@@ -150,10 +150,10 @@ model Notification {
 // -----------------------------------------------------------------------------
 
 model Conversation {
-  id          String   @id @default(uuid())
-  userId      String
-  listerId    String
-  listingId   String?
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  listerId    String   @db.ObjectId
+  listingId   String?  @db.ObjectId
 
   user        Profile     @relation("ConversationUser", fields: [userId], references: [id])
   lister      Profile     @relation("ConversationLister", fields: [listerId], references: [id])
@@ -165,16 +165,16 @@ model Conversation {
 }
 
 model Message {
-  id             String       @id @default(uuid())
-  conversationId String
-  senderId       String       // Profile ID
-  receiverId     String
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  conversationId String       @db.ObjectId
+  senderId       String       @db.ObjectId
+  receiverId     String       @db.ObjectId
   message        String
   type           String       @default("text") // text, image
   status         String       @default("sent") // sent, read
 
   timestamp      DateTime     @default(now())
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
 }
 
 // -----------------------------------------------------------------------------
@@ -182,11 +182,10 @@ model Message {
 // -----------------------------------------------------------------------------
 
 model Service {
-  id          String   @id @default(uuid())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String
   price       Float
   status      String   @default("ACTIVE")
   createdAt   DateTime @default(now())
 }
-
