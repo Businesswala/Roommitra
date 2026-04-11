@@ -58,7 +58,7 @@ export function SeekerDashboardContent({ initialProfile, initialSaved, initialBo
                   {profile?.name?.[0]?.toUpperCase() || "U"}
                </div>
                <div className="min-w-0">
-                  <h3 className="font-black text-slate-900 dark:text-white truncate">{profile?.name || "User"}</h3>
+                  <h3 className="font-black text-slate-900 dark:text-white truncate">Welcome! Browse properties, {profile?.name || "User"}</h3>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Seeker Portal</p>
                </div>
             </div>

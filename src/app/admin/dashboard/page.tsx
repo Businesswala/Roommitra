@@ -57,7 +57,7 @@ export default function AdminDashboard() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">System Overview</h1>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Welcome to Admin Panel</h1>
           <p className="text-slate-500 mt-1 font-medium">Real-time metrics and growth vectors.</p>
         </div>
         <div className="flex items-center gap-2 text-sm font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg border border-emerald-200 dark:border-emerald-500/20 shadow-sm">

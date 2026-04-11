@@ -57,7 +57,7 @@ export default function OverviewPage() {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div>
-        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Provider Command</h1>
+        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Welcome Lister! Manage your properties here.</h1>
         <p className="text-slate-500 mt-2 font-medium">Verify deployment status and monitor real-time fulfillment across your grid.</p>
       </div>
 
