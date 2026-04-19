@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+
 import { SeekerDashboardContent } from "@/app/user/dashboard/SeekerDashboardContent";
 import { getSavedListings, getSeekerBookings } from "@/app/actions/user";
-import { GetProfileBySupabaseId } from "@/app/actions/auth";
+import { GetProfileById } from "@/app/actions/auth";
 
 /**
  * CLIENT-SIDE DASHBOARD (BYPASS SSR)
@@ -13,7 +13,7 @@ import { GetProfileBySupabaseId } from "@/app/actions/auth";
  */
 export default function SeekerDashboard() {
   const router = useRouter();
-  const supabase = createClient();
+  const session = await getServerSession(authOptions);
   
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -25,7 +25,7 @@ export default function SeekerDashboard() {
     const startHandshake = async () => {
       try {
         // 1. Client-Side Auth Session
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = session?.user;
         
         if (!user) {
           router.push("/login");
@@ -36,7 +36,7 @@ export default function SeekerDashboard() {
 
         // 2. Client-Side Data Retrieval
         const [profileData, savedData, bookingsData] = await Promise.all([
-          GetProfileBySupabaseId(user.id).catch(() => null),
+          GetProfileById(user.id).catch(() => null),
           getSavedListings().catch(() => ({ data: [] })),
           getSeekerBookings().catch(() => ({ data: [] }))
         ]);

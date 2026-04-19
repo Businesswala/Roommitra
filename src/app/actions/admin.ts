@@ -1,8 +1,12 @@
 'use server'
 
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+
+
 import { dbCall } from "@/lib/db-utils"
 import { revalidatePath } from "next/cache"
-import { createClient } from "@/utils/supabase/server";
+
 
 /**
  * Fetch top-level system statistics for the admin dashboard

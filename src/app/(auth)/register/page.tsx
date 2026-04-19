@@ -11,15 +11,12 @@ import ImageUpload from '@/components/ImageUpload'
 import dynamic from 'next/dynamic'
 const DocumentUpload = dynamic(() => import('@/components/DocumentUpload'), { ssr: false })
 import { toast } from 'sonner'
-import { createClient } from '@/utils/supabase/client'
-import { RegisterProfile } from '@/app/actions/auth'
 
 import { Suspense } from 'react'
 
 function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClient()
   const [isLoading, setIsLoading] = useState(false)
   const [role, setRole] = useState<'USER' | 'LISTER'>('USER')
 
@@ -59,41 +56,27 @@ function RegisterForm() {
     setIsLoading(true)
 
     try {
-      // 1. Supabase Auth Sign Up
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.name,
-            role: role,
-          },
-        },
-      })
-
-      if (error) throw error
-
-      if (data.user) {
-        // 2. Insert into Prisma Profile table via Server Action
-        const result = await RegisterProfile({
-          supabaseId: data.user.id,
-          email: formData.email,
-          name: formData.name,
-          mobile: formData.phone,
-          role: role,
-          businessName: formData.businessName,
-          documentUrl: formData.documentUrl,
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          role
         })
+      });
 
-        if (!result.success) throw new Error(result.error)
-
-        toast.success(`Account created! Please check your email for verification.`)
-        
-        // Wait a bit and redirect
-        setTimeout(() => {
-          router.push('/login')
-        }, 2000)
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Registration failed');
       }
+
+      toast.success(`Account created! Please log in.`);
+      
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
+
     } catch (error: any) {
       toast.error(error.message || 'Registration failed')
     } finally {

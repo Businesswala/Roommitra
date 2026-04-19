@@ -18,10 +18,11 @@ enum Role {
 
 model Profile {
   id             String       @id @default(auto()) @map("_id") @db.ObjectId
-  supabaseId     String       @unique
+  supabaseId     String?      @unique
   email          String       @unique
   name           String
   mobile         String       @unique
+  hashedPassword String?
   role           Role         @default(USER)
   
   // Lister specific fields
@@ -40,6 +41,8 @@ model Profile {
   reviews        Review[]
   conversationsAsUser   Conversation[] @relation("ConversationUser")
   conversationsAsLister Conversation[] @relation("ConversationLister")
+  accounts              Account[]
+  sessions              Session[]
 }
 
 // -----------------------------------------------------------------------------
@@ -188,4 +191,44 @@ model Service {
   price       Float
   status      String   @default("ACTIVE")
   createdAt   DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// NEXT AUTHENTICATION
+// -----------------------------------------------------------------------------
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

@@ -33,7 +33,7 @@ export async function RegisterProfile(data: {
   }
 }
 
-export async function GetProfileBySupabaseId(supabaseId: string) {
+export async function GetProfileById(supabaseId: string) {
   try {
     const profile = await prisma.profile.findUnique({
       where: { supabaseId },

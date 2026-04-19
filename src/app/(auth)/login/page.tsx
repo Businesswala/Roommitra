@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { createClient } from '@/utils/supabase/client'
-import { GetProfileBySupabaseId } from '@/app/actions/auth'
+import { signIn } from 'next-auth/react'
 import { AlertCircle, ShieldAlert, RefreshCcw } from 'lucide-react'
 
 export default function LoginPage() {
@@ -23,13 +22,7 @@ export default function LoginPage() {
     password: '',
   })
 
-  // Safe Supabase Initialization
-  let supabase: any;
-  try {
-    supabase = createClient();
-  } catch (e: any) {
-    console.error("Supabase Init Failed:", e);
-  }
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -37,83 +30,32 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!supabase) {
-      toast.error("Authentication system is offline. Check configuration.")
-      return
-    }
-    
     setIsLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const result = await signIn("credentials", {
+        redirect: false,
         email: formData.email,
         password: formData.password,
-      })
+      });
 
-      if (error) throw error
-
-      if (data.user) {
-        const profile = await GetProfileBySupabaseId(data.user.id)
-        
-        if (!profile) {
-          toast.error("Profile not found. Please contact support.")
-          return
-        }
-
-        toast.success(`Welcome back, ${profile.name}!`)
-
-        // Role-Based Routing
-        if (profile.role === 'ADMIN') {
-          router.push('/admin/dashboard')
-        } else if (profile.role === 'LISTER') {
-          router.push('/lister/dashboard')
-        } else {
-          router.push('/user/dashboard')
-        }
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Identity Sequence Authorized.");
+        router.refresh();
+        // The redirection will be handled by middleware
+        router.push('/');
       }
     } catch (error: any) {
       console.error("Auth Exception:", error);
-      toast.error(error.message || 'Login failed due to a server response collision.')
+      toast.error('Login failed due to a server response collision.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Configuration check on mount
-  useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      setInitError("Missing System Credentials (NEXT_PUBLIC_SUPABASE). Deployment variables might not be loaded.")
-    }
-  }, [])
 
-  if (initError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <Card className="max-w-md w-full border-red-200 shadow-2xl rounded-3xl">
-          <CardHeader>
-            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mb-4">
-              <ShieldAlert className="text-red-600" />
-            </div>
-            <CardTitle className="text-xl font-bold text-red-700">System Integration Error</CardTitle>
-            <CardDescription className="font-medium text-slate-500">
-              The authentication handshake could not be established.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="p-4 bg-red-50 rounded-xl border border-red-100 mb-6">
-              <p className="text-xs font-mono text-red-600 leading-relaxed">{initError}</p>
-            </div>
-            <Button 
-              onClick={() => window.location.reload()} 
-              className="w-full bg-slate-900 h-14 rounded-2xl font-bold uppercase tracking-wider text-[10px]"
-            >
-              <RefreshCcw className="mr-2 h-4 w-4" /> Retry Handshake
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
 
   return (
     <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-1 lg:px-0">

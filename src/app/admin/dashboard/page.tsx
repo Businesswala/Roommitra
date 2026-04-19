@@ -5,19 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, TrendingUp, DollarSign, Home, CheckSquare, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { getSystemStats, getGrowthData } from "@/app/actions/admin";
 import { AdminCharts } from "@/components/admin/AdminCharts";
-import { createClient } from "@/utils/supabase/client";
+
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [growth, setGrowth] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
+  const session = await getServerSession(authOptions);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = session?.user;
         if (!user) return;
 
         const [statsResult, growthResult] = await Promise.all([

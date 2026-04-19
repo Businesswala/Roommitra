@@ -1,60 +1,77 @@
-import NextAuth from "next-auth";
+import NextAuth, { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcrypt";
+import type { Adapter } from "next-auth/adapters";
 
-const handler = NextAuth({
-  providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: "Email", type: "email", placeholder: "lister@roommitra.com" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        // Bypassing Prisma Native Connector temporarily to ensure Nextjs Server stability on Local Windows deployment.
-        // During production, we natively compare utilizing Prisma: `await prisma.lister.findUnique({ email })`
-        // followed by a secure `bcrypt.compare()` hash matching logic.
-        
-        const mockDbUser = {
-          id: "1",
-          email: "priya@test.com",
-          passwordHash: "dummy", // Actually "secure123" via plaintext mocked match
-          status: "APPROVED" 
-        };
-
-        if (credentials?.email === mockDbUser.email && credentials?.password === "secure123") {
-          if (mockDbUser.status !== "APPROVED") {
-             throw new Error("Lister account verification is still PENDING Admin approval.");
-          }
-          return { id: mockDbUser.id, email: mockDbUser.email, role: "lister" };
-        }
-        
-        return null;
-      }
-    })
-  ],
-  pages: {
-    signIn: '/lister/login',
-  },
+export const authOptions: AuthOptions = {
+  adapter: PrismaAdapter(prisma) as Adapter,
   session: {
     strategy: "jwt",
   },
+  pages: {
+    signIn: "/login",
+  },
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Invalid credentials");
+        }
+
+        const profile = await prisma.profile.findUnique({
+          where: {
+            email: credentials.email,
+          },
+        });
+
+        if (!profile || !profile.hashedPassword) {
+          throw new Error("Invalid credentials");
+        }
+
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password,
+          profile.hashedPassword
+        );
+
+        if (!isPasswordValid) {
+          throw new Error("Invalid credentials");
+        }
+
+        return {
+          id: profile.id,
+          email: profile.email,
+          name: profile.name,
+          role: profile.role,
+        };
+      },
+    }),
+  ],
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
         token.id = user.id;
+        token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }: any) {
+    async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role;
-        session.user.id = token.id;
+        session.user.id = token.id as string;
+        session.user.role = token.role as string;
       }
       return session;
-    }
+    },
   },
-  secret: process.env.NEXTAUTH_SECRET || "development-secret-key-12345"
-});
+  secret: process.env.NEXTAUTH_SECRET || "super-secret-key-for-nextauth",
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

@@ -8,19 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getListerStats, getRecentListerBookings } from "@/app/actions/listing";
-import { createClient } from "@/utils/supabase/client";
+
 import Link from "next/link";
 
 export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState<any>(null);
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
-  const supabase = createClient();
+  const session = await getServerSession(authOptions);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = session?.user;
         if (!user) return;
 
         const [statsResult, bookingsResult] = await Promise.all([

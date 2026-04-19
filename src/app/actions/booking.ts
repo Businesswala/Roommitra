@@ -1,20 +1,24 @@
 'use server'
 
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+
+
 import { dbCall } from "@/lib/db-utils"
 import { revalidatePath } from "next/cache"
-import { createClient } from "@/utils/supabase/server";
+
 
 /**
  * Seeker: Request a booking for a listing
  */
 export async function requestBooking(listingId: string, amount: number) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
   if (!user) return { data: null, error: "Unauthorized" };
 
   const result = await dbCall(async (db) => {
     const profile = await db.profile.findUnique({
-      where: { supabaseId: user.id }
+      where: { id: user.id }
     });
 
     if (!profile) throw new Error("Profile not found.");
@@ -56,8 +60,8 @@ export async function requestBooking(listingId: string, amount: number) {
  * Lister: Approve or Reject a booking request
  */
 export async function updateBookingStatus(bookingId: string, status: "CONFIRMED" | "CANCELLED") {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
   if (!user) return { data: null, error: "Unauthorized" };
 
   const result = await dbCall(async (db) => {

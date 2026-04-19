@@ -1,8 +1,12 @@
 'use server'
 
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+
+
 import { dbCall } from "@/lib/db-utils"
 import { revalidatePath } from "next/cache"
-import { createClient } from "@/utils/supabase/server";
+
 
 export async function getListings(type?: string) {
   try {
@@ -30,8 +34,8 @@ export async function getListings(type?: string) {
 }
 
 export async function createListing(formData: FormData) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
 
   if (!user) {
     return { data: null, error: "You must be logged in to post a listing." };
@@ -45,7 +49,7 @@ export async function createListing(formData: FormData) {
   
   const result = await dbCall(async (db) => {
     const profile = await db.profile.findUnique({
-      where: { supabaseId: user.id },
+      where: { id: user.id },
     });
 
     if (!profile) {
@@ -79,13 +83,13 @@ export async function createListing(formData: FormData) {
  * Fetch stats for the logged-in lister
  */
 export async function getListerStats() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
   if (!user) return { data: null, error: "Unauthorized" };
 
   return await dbCall(async (db) => {
     const profile = await db.profile.findUnique({
-      where: { supabaseId: user.id },
+      where: { id: user.id },
       include: {
         _count: {
           select: { listings: true }
@@ -116,13 +120,13 @@ export async function getListerStats() {
  * Fetch all listings for the logged-in lister
  */
 export async function getListerListings() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
   if (!user) return { data: null, error: "Unauthorized" };
 
   return await dbCall(async (db) => {
     const profile = await db.profile.findUnique({
-      where: { supabaseId: user.id }
+      where: { id: user.id }
     });
 
     if (!profile) throw new Error("Profile not found.");
@@ -138,8 +142,8 @@ export async function getListerListings() {
  * ADMIN ONLY: Fetch all pending listings
  */
 export async function getPendingListings() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
   
   // Security Layer (Simplified for demo)
   if (!user) return { data: null, error: "Unauthorized" };
@@ -161,8 +165,8 @@ export async function getPendingListings() {
  * ADMIN ONLY: Update listing status
  */
 export async function updateListingStatus(listingId: string, status: "APPROVED" | "REJECTED") {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
   if (!user) return { data: null, error: "Unauthorized" };
 
   const result = await dbCall(async (db) => {
@@ -215,12 +219,12 @@ export async function getListingById(id: string) {
  * Fetch latest 3 bookings for the logged-in lister
  */
 export async function getRecentListerBookings() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
   if (!user) return { data: [], error: "Unauthorized" };
 
   return await dbCall(async (db: any) => {
-    const profile = await db.profile.findUnique({ where: { supabaseId: user.id } });
+    const profile = await db.profile.findUnique({ where: { id: user.id } });
     if (!profile) return [];
     
     return await db.booking.findMany({

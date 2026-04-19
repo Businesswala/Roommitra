@@ -1,5 +1,7 @@
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { dbCall } from "@/lib/db-utils";
-import { createClient } from "@/utils/supabase/server";
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,13 +11,13 @@ import { updateBookingStatus } from "@/app/actions/booking";
 import { redirect } from "next/navigation";
 
 export default async function ListerBookingsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await getServerSession(authOptions);
+  const user = session?.user;
   if (!user) redirect("/login");
 
   const result = await dbCall(async (db) => {
     const profile = await db.profile.findUnique({
-      where: { supabaseId: user.id }
+      where: { id: user.id }
     });
 
     if (!profile) throw new Error("Profile not found");
