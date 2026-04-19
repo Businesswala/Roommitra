@@ -5,15 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, TrendingUp, DollarSign, Home, CheckSquare, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { getSystemStats, getGrowthData } from "@/app/actions/admin";
 import { AdminCharts } from "@/components/admin/AdminCharts";
-
+import { useSession } from "next-auth/react";
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [growth, setGrowth] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const session = await getServerSession(authOptions);
+  const { data: session, status } = useSession();
 
+  if (status === "loading") return <p>Loading...</p>;
   useEffect(() => {
     const fetchData = async () => {
       try {

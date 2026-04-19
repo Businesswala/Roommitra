@@ -6,15 +6,14 @@ import { useRouter } from "next/navigation";
 import { SeekerDashboardContent } from "@/app/user/dashboard/SeekerDashboardContent";
 import { getSavedListings, getSeekerBookings } from "@/app/actions/user";
 import { GetProfileById } from "@/app/actions/auth";
-
+import { useSession } from "next-auth/react";
 /**
  * CLIENT-SIDE DASHBOARD (BYPASS SSR)
  * Rewritten as a strict client component to avoid server-side initialization faults.
  */
 export default function SeekerDashboard() {
   const router = useRouter();
-  const session = await getServerSession(authOptions);
-  
+  const { data: session, status } = useSession();  
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [savedListings, setSavedListings] = useState<any[]>([]);

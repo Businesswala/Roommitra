@@ -4,6 +4,7 @@ import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
+import { SessionProvider } from "@/components/providers/SessionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,8 +47,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster position="top-center" richColors />
+          <SessionProvider>
+            {children}
+            <Toaster position="top-center" richColors />
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>

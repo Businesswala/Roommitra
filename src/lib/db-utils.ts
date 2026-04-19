@@ -1,4 +1,4 @@
-import db from "./prisma";
+import { prisma as db } from "./prisma";
 
 /**
  * Antigravity Database Wrapper

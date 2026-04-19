@@ -10,13 +10,14 @@ import { Button } from "@/components/ui/button";
 import { getListerStats, getRecentListerBookings } from "@/app/actions/listing";
 
 import Link from "next/link";
-
+import { useSession } from "next-auth/react";
 export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState<any>(null);
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
-  const session = await getServerSession(authOptions);
+  const { data: session, status } = useSession();
 
+  if (status === "loading") return <p>Loading...</p>;
   useEffect(() => {
     const fetchData = async () => {
       try {

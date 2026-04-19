@@ -4,7 +4,7 @@ import { CategoryNav } from "@/components/home/CategoryNav";
 import { FeaturedListings } from "@/components/home/FeaturedListings";
 import { TrustMetrics } from "@/components/home/TrustMetrics";
 import { Footer } from "@/components/home/Footer";
-import db from "@/lib/prisma";
+import { prisma as db } from "@/lib/prisma";
 
 export default async function Home() {
   const listings = await (db as any).listing.findMany({
